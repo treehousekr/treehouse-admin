@@ -115,11 +115,11 @@
 
     <div class="form-group">
       <label>이름 *</label>
-      <input type="text" id="cName" placeholder="홍길동">
+      <input type="text" id="cName" placeholder="홍길동" oninput="checkForm()">
     </div>
     <div class="form-group">
       <label>연락처 *</label>
-      <input type="tel" id="cPhone" placeholder="01012345678">
+      <input type="tel" id="cPhone" placeholder="010 0000 0000" maxlength="13" oninput="formatPhone(this)" onchange="checkForm()">
     </div>
     <div class="form-group">
       <label>인원수 *</label>
@@ -137,7 +137,7 @@
     <!-- 약관 -->
     <div class="terms-wrap">
       <div class="terms-check-row">
-        <input type="checkbox" id="cTerms">
+        <input type="checkbox" id="cTerms" onchange="checkForm()">
         <span>개인정보 및 이용약관에 동의합니다</span>
         <button class="terms-toggle" onclick="toggleTerms()">더보기 ∨</button>
       </div>
@@ -158,7 +158,7 @@
 <button class="terms-fold" onclick="toggleTerms()">^ 접기</button></div>
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="submitBooking()">예약 신청</button>
+    <button class="submit-btn" id="submitBtn" onclick="submitBooking()" disabled style="background:#ccc;cursor:default">예약 신청</button>
   </div>
 
   <!-- 성공 메시지 -->
@@ -188,6 +188,25 @@ window.changeMonth=changeMonth
 window.toggleTerms=toggleTerms
 window.submitBooking=submitBooking
 
+function formatPhone(input){
+  let v=input.value.replace(/\D/g,'').substring(0,11)
+  if(v.length<=3)input.value=v
+  else if(v.length<=7)input.value=v.slice(0,3)+' '+v.slice(3)
+  else input.value=v.slice(0,3)+' '+v.slice(3,7)+' '+v.slice(7)
+  checkForm()
+}
+
+function checkForm(){
+  const name=document.getElementById('cName').value.trim()
+  const phone=document.getElementById('cPhone').value.replace(/\s/g,'')
+  const terms=document.getElementById('cTerms').checked
+  const btn=document.getElementById('submitBtn')
+  const valid=name.length>0&&phone.length===11&&terms
+  btn.disabled=!valid
+  btn.style.background=valid?'#3b7a5a':'#ccc'
+  btn.style.cursor=valid?'pointer':'default'
+}
+
 async function init(){
   try{
     const[rr,or,pr,dr,sr]=await Promise.all([
@@ -195,13 +214,21 @@ async function init(){
       sb.from('options').select('*').eq('is_active',true),
       sb.from('pricing').select('*'),
       sb.from('discounts').select('*'),
-      sb.from('site_settings').select('*').eq('key','customer_notice')
+      sb.from('site_settings').select('*')
     ])
     allData=rr.data||[];optionsData=or.data||[];pricingData=pr.data||[];discountData=dr.data||[]
-    // 안내사항
-    if(sr.data&&sr.data[0]&&sr.data[0].value){
-      document.getElementById('noticeText').textContent=sr.data[0].value
-      document.getElementById('noticeWrap').style.display='block'
+    // 안내사항 + 약관
+    if(sr.data){
+      const notice=sr.data.find(s=>s.key==='customer_notice')
+      const terms=sr.data.find(s=>s.key==='customer_terms')
+      if(notice&&notice.value){
+        document.getElementById('noticeText').textContent=notice.value
+        document.getElementById('noticeWrap').style.display='block'
+      }
+      if(terms&&terms.value){
+        document.getElementById('termsContent').innerHTML=terms.value.replace(/\n/g,'<br>')+
+          '<button class="terms-fold" onclick="toggleTerms()">^ 접기</button>'
+      }
     }
     buildCalendar()
   }catch(e){console.error('[init]',e)}
@@ -307,14 +334,17 @@ function toggleTerms(){
 
 async function submitBooking(){
   const name=document.getElementById('cName').value.trim()
-  const phone=document.getElementById('cPhone').value.trim()
+  const phoneRaw=document.getElementById('cPhone').value.replace(/\s/g,'')
+  const phone=phoneRaw
   const people=parseInt(document.getElementById('cPeople').value)||0
   const receipt=document.getElementById('cReceipt').value.trim()
   const terms=document.getElementById('cTerms').checked
   const errBar=document.getElementById('formErrBar')
   errBar.style.display='none'
 
-  if(!name||!phone||!people){errBar.textContent='이름, 연락처, 인원수를 입력해주세요.';errBar.style.display='block';return}
+  if(!name){errBar.textContent='이름을 입력해주세요.';errBar.style.display='block';return}
+  if(phone.length!==11){errBar.textContent='연락처를 11자리로 입력해주세요. (예: 010 0000 0000)';errBar.style.display='block';return}
+  if(!people){errBar.textContent='인원수를 입력해주세요.';errBar.style.display='block';return}
   if(!terms){errBar.textContent='이용약관에 동의해주세요.';errBar.style.display='block';return}
   if(!selectedHouse||!selectedDate){errBar.textContent='캘린더에서 날짜와 객실을 선택해주세요.';errBar.style.display='block';return}
 
@@ -349,7 +379,7 @@ async function submitBooking(){
     const fmtISO2=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
     const{error}=await sb.from('reservations').insert([{
       visit_date:selectedDate,booking_date:fmtISO2(new Date()),
-      room_name:selectedHouse,customer_name:name,customer_phone:phone,
+      room_name:selectedHouse,customer_name:name,customer_phone:phone.replace(/\s/g,''),
       people_count:people,bbq:hasBBQ,total_paid:base||null,
       status:'대기',booking_type:'reservation',is_cancelled:false,
       vat_number:receipt||null,
