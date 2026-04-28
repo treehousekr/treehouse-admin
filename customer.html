@@ -29,6 +29,13 @@
     .cal-dow{text-align:center;padding:6px 0;font-size:11px;color:#aaa}
     .cal-dow.sun,.cal-dow.sat{color:#c8d8ee}
     .cal-cell{padding:4px 3px;min-height:64px;background:#fff;border-top:0.5px solid #f0efea;position:relative}
+    .cal-cell.other-month{background:#fafaf8;cursor:pointer}
+    .cal-cell.other-month:hover{background:#f0f0ee}
+    .cal-cell.other-month .cal-date-num{color:#ccc}
+    .cal-cell.other-month.col-sun .cal-date-num,.cal-cell.other-month.col-sat .cal-date-num{color:#d4e0ee}
+    .c-room.other-free{font-size:9px;line-height:1.5;text-align:center;color:#ccc;cursor:pointer;border-radius:3px;padding:1px 2px;margin-bottom:1px}
+    .c-room.other-free:hover{color:#aaa}
+    .c-room.other-taken{font-size:9px;line-height:1.5;text-align:center;color:#e0e0e0;text-decoration:line-through;cursor:default;padding:1px 2px;margin-bottom:1px}
     .cal-cell.other-month{background:#fafaf8}
     .cal-date-num{font-size:11px;font-weight:500;margin-bottom:3px;color:#555;text-align:center}
     .cal-cell.col-sun .cal-date-num,.cal-cell.col-sat .cal-date-num{color:#b0c8e8}
@@ -293,17 +300,40 @@ function buildCalendar(){
     const el=document.createElement('div');el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');el.textContent=d;grid.appendChild(el)
   })
   const first=new Date(curYear,curMonth,1);const startDay=first.getDay()
-  // 이전달 빈칸
+  const todayISO=fmtISO(today)
   const prevY=curMonth===0?curYear-1:curYear;const prevM=curMonth===0?11:curMonth-1
   const prevDays=new Date(prevY,prevM+1,0).getDate()
+  const nextY=curMonth===11?curYear+1:curYear;const nextM=curMonth===11?0:curMonth+1
+
+  // ── 이전달 날짜 (클릭하면 해당 달로 이동) ──
   for(let i=0;i<startDay;i++){
     const d=prevDays-startDay+1+i
+    const isoDay=`${prevY}-${pad(prevM+1)}-${pad(d)}`
     const el=document.createElement('div');el.className='cal-cell other-month'
+    const dow=new Date(prevY,prevM,d).getDay()
+    if(dow===0)el.classList.add('col-sun');if(dow===6)el.classList.add('col-sat')
     const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    // 이전달 객실 상태 표시 (연하게)
+    const visible=getVisibleHouses(isoDay)
+    const isPast=isoDay<todayISO
+    visible.forEach(h=>{
+      const taken=isTaken(h,isoDay)
+      const span=document.createElement('div')
+      span.style.cssText='font-size:9px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;color:#ddd;'+(taken?'text-decoration:line-through;':'')
+      span.textContent=h
+      el.appendChild(span)
+    })
+    el.style.cursor='pointer'
+    el.onclick=(e)=>{
+      if(e.target.tagName==='DIV'||e.target===el){
+        curYear=prevY;curMonth=prevM;buildCalendar()
+      }
+    }
     grid.appendChild(el)
   }
+
+  // ── 현재 달 날짜 ──
   const days=new Date(curYear,curMonth+1,0).getDate()
-  const todayISO=fmtISO(today)
   for(let d=1;d<=days;d++){
     const isoDay=`${curYear}-${pad(curMonth+1)}-${pad(d)}`
     const isPast=isoDay<todayISO
@@ -321,18 +351,36 @@ function buildCalendar(){
         span.className='c-room taken';span.textContent=h
       }else{
         span.className='c-room free';span.textContent=h
-        span.onclick=()=>selectRoom(h,curYear,curMonth+1,d,isoDay)
+        span.onclick=(e)=>{e.stopPropagation();selectRoom(h,curYear,curMonth+1,d,isoDay)}
       }
       el.appendChild(span)
     })
     grid.appendChild(el)
   }
-  // 다음달 빈칸
-  const nextY=curMonth===11?curYear+1:curYear;const nextM=curMonth===11?0:curMonth+1
+
+  // ── 다음달 날짜 (클릭하면 해당 달로 이동) ──
   const total=startDay+days;const rem=(7-total%7)%7
   for(let d=1;d<=rem;d++){
+    const isoDay=`${nextY}-${pad(nextM+1)}-${pad(d)}`
     const el=document.createElement('div');el.className='cal-cell other-month'
+    const dow=new Date(nextY,nextM,d).getDay()
+    if(dow===0)el.classList.add('col-sun');if(dow===6)el.classList.add('col-sat')
     const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    const visible=getVisibleHouses(isoDay)
+    const isPast=isoDay<todayISO
+    visible.forEach(h=>{
+      const taken=isTaken(h,isoDay)
+      const span=document.createElement('div')
+      span.style.cssText='font-size:9px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;color:#ddd;'+(taken?'text-decoration:line-through;':'')
+      span.textContent=h
+      el.appendChild(span)
+    })
+    el.style.cursor='pointer'
+    el.onclick=(e)=>{
+      if(e.target.tagName==='DIV'||e.target===el){
+        curYear=nextY;curMonth=nextM;buildCalendar()
+      }
+    }
     grid.appendChild(el)
   }
 }

@@ -19,17 +19,17 @@
     .error-bar{padding:12px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin:8px}
 
     /* 캘린더 */
-    .cal-top{display:flex;align-items:center;justify-content:center;padding:10px 14px 6px;position:relative}
-    .cal-tools{position:absolute;left:14px;display:flex;gap:6px;align-items:center}
-    .cal-tools button{background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:2px 5px;border-radius:3px;font-family:inherit}
+    .cal-top{display:flex;align-items:center;justify-content:center;padding:8px 10px 5px;position:relative}
+    .cal-tools{position:absolute;left:10px;display:flex;gap:3px;align-items:center}
+    .cal-tools button{background:none;border:none;cursor:pointer;font-size:10px;color:#999;padding:1px 4px;border-radius:3px;font-family:inherit}
     .cal-tools button:hover{color:#333;background:#f0f0ee}
     .cal-tools button.active-tool{color:#185fa5;font-weight:500;background:#e6f1fb}
-    .cal-right{position:absolute;right:14px;display:flex;gap:8px;align-items:center}
-    .cal-right a,.cal-right button{background:none;border:none;cursor:pointer;font-size:11px;color:#bbb;text-decoration:none;font-family:inherit}
+    .cal-right{position:absolute;right:10px;display:flex;gap:4px;align-items:center}
+    .cal-right a,.cal-right button{background:none;border:none;cursor:pointer;font-size:10px;color:#bbb;text-decoration:none;font-family:inherit}
     .cal-right a:hover,.cal-right button:hover{color:#888}
-    .cal-nav{display:flex;align-items:center;gap:12px}
-    .cal-nav button{background:none;border:none;cursor:pointer;color:#666;font-size:16px;padding:2px 6px}
-    .cal-month{font-size:15px;font-weight:500}
+    .cal-nav{display:flex;align-items:center;gap:10px}
+    .cal-nav button{background:none;border:none;cursor:pointer;color:#666;font-size:15px;padding:2px 5px}
+    .cal-month{font-size:14px;font-weight:500}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:0.5px solid #e0dfd8}
     .cal-dow{text-align:center;padding:5px 0;font-size:11px;color:#888;border-bottom:0.5px solid #e0dfd8}
     .cal-dow.sun,.cal-dow.sat{color:#378add}
@@ -47,13 +47,15 @@
     /* 관리자 캘린더 상태별 색상 */
     .cal-item.available{color:#1a1a1a;cursor:pointer;display:block}
     .cal-item.available:hover{color:#378add}
-    .cal-item.confirmed{color:#c0392b;text-decoration:line-through;cursor:default} /* 예약완료 - 빨간줄 */
-    .cal-item.pending{color:#e67e22;text-decoration:underline dotted;cursor:default} /* 예약대기 - 주황 점선 */
-    .cal-item.blocked{color:#2980b9;text-decoration:line-through;cursor:pointer} /* 예약막기 - 파란줄 */
+    .cal-item.confirmed{color:#c0392b;text-decoration:line-through;cursor:default}
+    .cal-item.pending{color:#aaa;text-decoration:underline dotted;cursor:default}
+    .cal-item.blocked{color:#e67e22;text-decoration:line-through;cursor:pointer}
+    .cal-item.temp-blocked{color:#27ae60;text-decoration:line-through;cursor:pointer}
     .cal-item.other-available{color:#ccc;cursor:pointer;display:block}
     .cal-item.other-confirmed{color:#e8b0b0;text-decoration:line-through;cursor:default}
-    .cal-item.other-pending{color:#f0c898;text-decoration:underline dotted;cursor:default}
-    .cal-item.other-blocked{color:#a8c8e8;text-decoration:line-through;cursor:default}
+    .cal-item.other-pending{color:#ddd;text-decoration:underline dotted;cursor:default}
+    .cal-item.other-blocked{color:#f5c97a;text-decoration:line-through;cursor:default}
+    .cal-item.other-temp-blocked{color:#a8d5b5;text-decoration:line-through;cursor:default}
     .cal-schedule{font-size:10px;color:#7f8c8d;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;font-style:italic}
     .cal-schedule:hover{color:#555;text-decoration:underline}
 
@@ -220,8 +222,8 @@
         <button onclick="changeMonth(1)">&#8250;</button>
       </div>
       <div class="cal-right">
-        <button id="btnCustomer" onclick="openCustomerMgmt()">고객화면관리</button>
-        <a href="customer.html" target="_blank">고객화면</a>
+        <button id="btnCustomer" onclick="openCustomerMgmt()">고객창관리</button>
+        <a href="customer.html" target="_blank">고객창</a>
         <span style="color:#e0dfd8">|</span>
         <button onclick="openScheduleAddPopup()">일정추가</button>
       </div>
@@ -233,7 +235,7 @@
   <!-- 날짜별 -->
   <div class="section">
     <div class="date-header">
-      <span class="section-label">1.</span>
+      <span class="section-label">오늘함</span>
       <div class="date-nav-inner">
         <button onclick="changeDay(-1)">&#8249;</button>
         <span class="date-label" id="dateSectionLabel"></span>
@@ -245,16 +247,16 @@
       <table class="tbl">
         <thead><tr>
           <th style="width:22px"><input type="checkbox" id="chkAllDate" style="width:11px" onchange="toggleAllCheck('date',this.checked)"></th>
-          <th style="width:62px">신청일</th>
-          <th style="width:62px">방문일</th>
+          <th style="width:58px">신청일</th>
+          <th style="width:58px">방문일</th>
           <th style="width:62px">객실</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
+          <th style="width:44px">이름</th>
+          <th style="width:26px">인원</th>
+          <th style="width:30px">수영</th>
+          <th style="width:20px">BBQ</th>
           <th style="width:104px">연락처</th>
           <th style="width:34px">도착</th>
-          <th style="width:68px">결제금액</th>
+          <th style="width:62px">결제금액</th>
           <th style="width:90px">메모</th>
           <th style="width:22px">후기</th>
           <th style="width:120px">관리자메모</th>
@@ -268,22 +270,22 @@
   <!-- 승인 대기 -->
   <div class="section">
     <div class="section-header">
-      <span class="section-title">2. 승인 대기</span>
-      <span id="waitCount" style="font-size:11px;color:#854f0b"></span>
+      <span class="section-title">승인함</span>
+      <span id="waitCount" style="font-size:11px;color:#854f0b" style="font-size:11px;color:#854f0b"></span>
     </div>
     <div style="overflow-x:auto">
       <table class="tbl">
         <thead><tr>
           <th style="width:22px"><input type="checkbox" style="width:11px"></th>
-          <th style="width:62px">신청일</th>
-          <th style="width:62px">방문일</th>
+          <th style="width:58px">신청일</th>
+          <th style="width:58px">방문일</th>
           <th style="width:62px">객실</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
+          <th style="width:44px">이름</th>
+          <th style="width:26px">인원</th>
+          <th style="width:30px">수영</th>
+          <th style="width:20px">BBQ</th>
           <th style="width:108px">연락처</th>
-          <th style="width:68px">결제금액</th>
+          <th style="width:62px">결제금액</th>
           <th style="width:58px">상태</th>
           <th>메모</th>
           <th style="width:80px">처리</th>
@@ -296,7 +298,7 @@
   <!-- 전체목록 -->
   <div class="section">
     <div class="section-header">
-      <span class="section-title">3.</span>
+      <span class="section-title">완료함</span>
       <div class="tab-row" id="tabRow">
         <button class="tab active-complete" onclick="setTab('예약완료')">완료</button>
         <button class="tab" onclick="setTab('취소')">취소</button>
@@ -311,16 +313,16 @@
       <table class="tbl">
         <thead><tr>
           <th style="width:22px"><input type="checkbox" id="chkAllAll" style="width:11px" onchange="toggleAllCheck('all',this.checked)"></th>
-          <th style="width:62px" onclick="sortToggle('booking_date')" id="thCreated">신청일</th>
-          <th style="width:62px" onclick="sortToggle('visit_date')" id="thDate">방문일↓</th>
+          <th style="width:58px" onclick="sortToggle('booking_date')" id="thCreated">신청일</th>
+          <th style="width:58px" onclick="sortToggle('visit_date')" id="thDate">방문일↓</th>
           <th style="width:66px" id="thRoom" onclick="openRoomDropdown(event)">객실▾</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
+          <th style="width:44px">이름</th>
+          <th style="width:26px">인원</th>
+          <th style="width:30px">수영</th>
+          <th style="width:20px">BBQ</th>
           <th style="width:104px">연락처</th>
           <th style="width:34px">도착</th>
-          <th style="width:68px">결제금액</th>
+          <th style="width:62px">결제금액</th>
           <th style="width:90px">메모</th>
           <th style="width:22px">후기</th>
           <th style="width:120px">관리자메모</th>
@@ -389,9 +391,17 @@
       <h3 id="bookTitle">예약하기</h3>
       <div class="book-subtitle" id="bookSubtitle"></div>
     </div>
-    <label class="block-check-wrap">
-      <input type="checkbox" id="isBlockCheck" onchange="onBlockToggle()"> 예약막기
-    </label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#e67e22;cursor:pointer">
+        <input type="radio" name="blockType" id="isBlockCheck" value="block" onchange="onBlockToggle()"> 예약막기
+      </label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#27ae60;cursor:pointer">
+        <input type="radio" name="blockType" id="isTempBlockCheck" value="temp_block" onchange="onBlockToggle()"> 임시막기
+      </label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#888;cursor:pointer">
+        <input type="radio" name="blockType" id="isNormalCheck" value="normal" checked onchange="onBlockToggle()"> 예약신청
+      </label>
+    </div>
   </div>
   <!-- 일반 예약 폼 -->
   <div id="bookNormalForm">
@@ -445,23 +455,12 @@
 <div class="schedule-popup" id="scheduleAddPopup">
   <h3>일정 추가</h3>
   <div class="form-row"><label>날짜 *</label><input type="date" id="schAddDate"></div>
-  <div class="form-row">
-    <label>종류 *</label>
-    <select id="schAddType" style="border:0.5px solid #ccc;border-radius:6px;padding:7px 10px;font-size:12px;background:#fff;font-family:inherit">
-      <option value="답사">답사</option>
-      <option value="웨딩상담">웨딩상담</option>
-      <option value="촬영">촬영</option>
-      <option value="청소">청소</option>
-      <option value="기타">기타 일정</option>
-    </select>
-  </div>
-  <div class="form-row"><label>내용 <span style="font-size:10px;color:#aaa">(선택)</span></label><input type="text" id="schAddNote" placeholder="내용"></div>
+  <div class="form-row"><label>내용 *</label><input type="text" id="schAddNote" placeholder="예: 청소, 답사, 웨딩상담"></div>
   <div class="form-row">
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
       <input type="checkbox" id="schAddToReservations" style="width:13px;height:13px">
-      <span>예약 목록에도 추가</span>
+      <span>완료함 추가</span>
     </label>
-    <span style="font-size:10px;color:#aaa;margin-top:3px">체크 시 예약 테이블에도 저장됩니다</span>
   </div>
   <div class="book-actions">
     <button class="btn-primary" onclick="saveScheduleAdd()">저장</button>
@@ -698,6 +697,7 @@ function buildCalendar(){
 }
 
 function getCalItemClass(status,bookingType,isOther){
+  if(bookingType==='temp_block')return isOther?'other-temp-blocked':'temp-blocked'
   if(bookingType==='block')return isOther?'other-blocked':'blocked'
   if(status==='예약완료')return isOther?'other-confirmed':'confirmed'
   if(status==='대기'||status==='취소요청')return isOther?'other-pending':'pending'
@@ -744,7 +744,10 @@ function buildCalCell(d,y,m,isoDay,isOther){
 
 // ── 일정 추가 팝업 ──
 function openScheduleAddPopup(){
-  document.getElementById('schAddDate').value=''
+  // 선택된 날짜가 있으면 자동입력
+  const iso=fmtISO(selectedDate)
+  const todayISO=fmtISO(today)
+  document.getElementById('schAddDate').value=(iso&&iso!==todayISO)?iso:''
   document.getElementById('schAddNote').value=''
   document.getElementById('schAddToReservations').checked=false
   document.getElementById('scheduleAddPopup').classList.add('show')
@@ -753,25 +756,23 @@ function openScheduleAddPopup(){
 
 async function saveScheduleAdd(){
   const date=document.getElementById('schAddDate').value
-  const type=document.getElementById('schAddType').value
   const note=document.getElementById('schAddNote').value.trim()
   const addToRes=document.getElementById('schAddToReservations').checked
   if(!date){alert('날짜를 선택해주세요.');return}
+  if(!note){alert('내용을 입력해주세요.');return}
   try{
-    // schedules 테이블에 저장
-    const{data:sd,error:se}=await sb.from('schedules').insert([{schedule_date:date,title:type,note:note||null,add_to_reservations:addToRes,updated_at:new Date().toISOString()}]).select()
+    const{data:sd,error:se}=await sb.from('schedules').insert([{schedule_date:date,title:note,note:null,add_to_reservations:addToRes,updated_at:new Date().toISOString()}]).select()
     if(se)throw se
     if(sd&&sd[0])schedulesData.push(sd[0])
     schedulesData.sort((a,b)=>a.schedule_date.localeCompare(b.schedule_date))
-    // 예약 테이블에도 추가 옵션
     if(addToRes){
       const{error:re}=await sb.from('reservations').insert([{
         visit_date:date,booking_date:fmtISO(today),room_name:'일정',
-        customer_name:type,memo:note||null,status:'예약완료',
+        customer_name:note,memo:null,status:'예약완료',
         booking_type:'schedule',is_cancelled:false,people_count:0,
         created_at:new Date().toISOString(),updated_at:new Date().toISOString()
       }])
-      if(re)console.warn('[saveScheduleAdd] 예약 테이블 추가 실패:',re)
+      if(re)console.warn('[saveScheduleAdd] 완료함 추가 실패:',re)
     }
     await reloadReservations()
     closeAll()
@@ -796,10 +797,12 @@ async function deleteScheduleFromView(){
 
 // ── 예약하기 / 예약막기 팝업 ──
 function onBlockToggle(){
-  const isBlock=document.getElementById('isBlockCheck').checked
+  const val=document.querySelector('input[name="blockType"]:checked').value
+  const isBlock=val==='block'||val==='temp_block'
   document.getElementById('bookNormalForm').style.display=isBlock?'none':'block'
   document.getElementById('bookBlockForm').style.display=isBlock?'block':'none'
-  document.getElementById('bookTitle').textContent=isBlock?'예약막기':'예약하기'
+  const labels={'block':'예약막기','temp_block':'임시막기','normal':'예약하기'}
+  document.getElementById('bookTitle').textContent=labels[val]||'예약하기'
 }
 
 function openBooking(house,y,m,d,isoDay){
@@ -807,7 +810,7 @@ function openBooking(house,y,m,d,isoDay){
   bookingCtx={house,year:y,month:m,day:d,isWeekend:weekend,isoDate:isoDay}
   document.getElementById('bookTitle').textContent='예약하기'
   document.getElementById('bookSubtitle').textContent=`${house}  ·  ${y}년 ${m}월 ${d}일 (${weekend?'주말':'주중'})`
-  document.getElementById('isBlockCheck').checked=false
+  document.getElementById('isNormalCheck').checked=true
   document.getElementById('bookNormalForm').style.display='block'
   document.getElementById('bookBlockForm').style.display='none'
   document.getElementById('blockReason').value=''
@@ -864,13 +867,15 @@ async function saveBooking(){
   const{house,year,month,day,isWeekend,isoDate}=bookingCtx
   const btn=document.getElementById('bookSaveBtn');btn.disabled=true;btn.textContent='저장 중...'
   try{
+    const blockVal=document.querySelector('input[name="blockType"]:checked').value
+    const isBlock=blockVal==='block'||blockVal==='temp_block'
     if(isBlock){
-      // 예약막기
       const reason=document.getElementById('blockReason').value.trim()
+      const label=blockVal==='block'?'예약막기':'임시막기'
       const{error}=await sb.from('reservations').insert([{
         visit_date:`${year}-${pad(month)}-${pad(day)}`,booking_date:fmtISO(today),
-        room_name:house,customer_name:'예약막기',memo:reason||null,
-        status:'예약완료',booking_type:'block',is_cancelled:false,people_count:0,
+        room_name:house,customer_name:label,memo:reason||null,
+        status:'예약완료',booking_type:blockVal,is_cancelled:false,people_count:0,
         created_at:new Date().toISOString(),updated_at:new Date().toISOString()
       }])
       if(error)throw error
@@ -959,7 +964,7 @@ function buildAll(){
   let rows
   if(allTab==='취소')rows=allData.filter(r=>r.is_cancelled||r.status==='취소')
   else if(allTab==='all')rows=[...allData]
-  else rows=allData.filter(r=>r.status===allTab&&!r.is_cancelled)
+  else rows=allData.filter(r=>r.status===allTab&&!r.is_cancelled&&r.booking_type!=='block'&&r.booking_type!=='temp_block')
   if(roomFilter)rows=rows.filter(r=>r.room_name===roomFilter)
   rows.sort((a,b)=>{const va=new Date(a[sortField]||0),vb=new Date(b[sortField]||0);return sortDir*(vb-va)})
   if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="15">해당 예약이 없습니다</td></tr>';return}
