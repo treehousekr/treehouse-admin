@@ -1,4 +1,6 @@
 {
+  "buildCommand": "cp customer.html public/customer.html && vite build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/customer", "destination": "/customer.html" }
   ]
