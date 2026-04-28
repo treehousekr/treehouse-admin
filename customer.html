@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>트리하우스 관리자</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap" rel="stylesheet">
+  <title>트리하우스 예약</title>
   <style>
     @font-face {
       font-family: 'ChosunGu';
@@ -13,518 +11,162 @@
       font-weight: normal; font-style: normal;
     }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'ChosunGu','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px;color:#1a1a1a;background:#f5f5f3}
-    .board{display:flex;flex-direction:column;gap:12px;padding:12px;max-width:1700px;margin:0 auto}
-    .section{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;overflow:hidden}
-    .error-bar{padding:12px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin:8px}
+    body{font-family:'ChosunGu','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#faf9f7;min-height:100vh}
+
+    .page{max-width:480px;margin:0 auto;padding:20px 16px 60px}
+
+    /* 헤더 */
+    .site-header{text-align:center;padding:24px 0 16px}
+    .site-title{font-size:20px;font-weight:500;letter-spacing:0.05em;color:#2c2c2c}
+    .site-sub{font-size:12px;color:#aaa;margin-top:4px}
 
     /* 캘린더 */
-    .cal-top{display:flex;align-items:center;justify-content:center;padding:10px 14px 6px;position:relative}
-    .cal-tools{position:absolute;left:14px;display:flex;gap:8px}
-    .cal-tools button{background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:2px 5px;border-radius:3px}
-    .cal-tools button:hover{color:#333;background:#f0f0ee}
-    .cal-tools button.active-tool{color:#185fa5;font-weight:500;background:#e6f1fb}
-    .cal-right{position:absolute;right:14px;display:flex;gap:10px;align-items:center}
-    .cal-right a,.cal-right button{background:none;border:none;cursor:pointer;font-size:11px;color:#bbb;text-decoration:none;font-family:inherit}
-    .cal-right a:hover,.cal-right button:hover{color:#888}
-    .cal-nav{display:flex;align-items:center;gap:12px}
-    .cal-nav button{background:none;border:none;cursor:pointer;color:#666;font-size:16px;padding:2px 6px}
-    .cal-month{font-size:15px;font-weight:500}
-    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-top:0.5px solid #e0dfd8}
-    .cal-dow{text-align:center;padding:5px 0;font-size:11px;color:#888;border-bottom:0.5px solid #e0dfd8}
-    .cal-dow.sun,.cal-dow.sat{color:#378add}
-    .cal-cell{border:0.5px solid #e0dfd8;padding:3px 4px;min-height:72px;cursor:pointer;background:#fff;transition:background 0.1s;position:relative}
-    .cal-cell:hover{background:#f5f5f3}
-    .cal-cell.today{outline:2px solid #378add;outline-offset:-2px;z-index:1}
-    .cal-cell.selected{outline:2px solid #378add;outline-offset:-2px;background:#e6f1fb;z-index:2}
+    .cal-wrap{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);margin-bottom:20px}
+    .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 16px 8px}
+    .cal-nav button{background:none;border:none;cursor:pointer;color:#888;font-size:18px;padding:2px 8px;font-family:inherit}
+    .cal-month{font-size:15px;font-weight:500;color:#2c2c2c}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+    .cal-dow{text-align:center;padding:6px 0;font-size:11px;color:#aaa}
+    .cal-dow.sun,.cal-dow.sat{color:#c8d8ee}
+    .cal-cell{padding:4px 3px;min-height:64px;background:#fff;border-top:0.5px solid #f0efea;position:relative}
     .cal-cell.other-month{background:#fafaf8}
-    .cal-cell.other-month:hover{background:#f0f0ee}
-    .cal-date{font-size:11px;font-weight:500;margin-bottom:2px;pointer-events:none}
-    .cal-cell.col-sun .cal-date,.cal-cell.col-sat .cal-date{color:#378add}
-    .cal-cell.col-holiday .cal-date{color:#e24b4a}
-    .cal-cell.other-month .cal-date{color:#ccc}
-    .cal-item{font-size:10px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    /* 관리자 캘린더 상태별 색상 */
-    .cal-item.available{color:#1a1a1a;cursor:pointer;display:block}
-    .cal-item.available:hover{color:#378add}
-    .cal-item.confirmed{color:#c0392b;text-decoration:line-through;cursor:default} /* 예약완료 - 빨간줄 */
-    .cal-item.pending{color:#e67e22;text-decoration:underline dotted;cursor:default} /* 예약대기 - 주황 점선 */
-    .cal-item.blocked{color:#2980b9;text-decoration:line-through;cursor:default} /* 예약막기 - 파란줄 */
-    .cal-item.other-available{color:#ccc;cursor:pointer;display:block}
-    .cal-item.other-confirmed{color:#e8b0b0;text-decoration:line-through;cursor:default}
-    .cal-item.other-pending{color:#f0c898;text-decoration:underline dotted;cursor:default}
-    .cal-item.other-blocked{color:#a8c8e8;text-decoration:line-through;cursor:default}
-    .cal-schedule{font-size:10px;color:#7f8c8d;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;font-style:italic}
-    .cal-schedule:hover{color:#555;text-decoration:underline}
+    .cal-date-num{font-size:11px;font-weight:500;margin-bottom:3px;color:#555;text-align:center}
+    .cal-cell.col-sun .cal-date-num,.cal-cell.col-sat .cal-date-num{color:#b0c8e8}
+    .cal-cell.col-holiday .cal-date-num{color:#e8a0a0}
+    .cal-cell.other-month .cal-date-num{color:#ddd}
+    /* 고객 캘린더 객실 표시 */
+    .c-room{font-size:9px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;cursor:pointer;border-radius:3px;padding:1px 2px;margin-bottom:1px}
+    .c-room.free{color:#555;background:#f5f5f0}
+    .c-room.free:hover{background:#e8f4e8;color:#3b6d11}
+    .c-room.taken{color:#bbb;text-decoration:line-through;cursor:default;background:transparent}
 
-    /* 범례 */
-    .cal-legend{display:flex;gap:12px;padding:6px 14px;border-top:0.5px solid #e0dfd8;font-size:10px;color:#888;flex-wrap:wrap}
-    .legend-item{display:flex;align-items:center;gap:4px}
-    .legend-dot{width:8px;height:8px;border-radius:50%}
+    /* 선택된 날짜 표시 */
+    .cal-cell.selected-day{background:#f0f8f0}
 
-    /* 날짜 섹션 */
-    .date-header{display:flex;align-items:center;padding:10px 14px;border-bottom:0.5px solid #e0dfd8;gap:10px}
-    .date-nav-inner{display:flex;align-items:center;gap:6px}
-    .date-nav-inner button{background:none;border:none;cursor:pointer;color:#666;font-size:16px;padding:2px 4px}
-    .date-label{font-size:13px;font-weight:500}
-    .section-label{font-size:12px;font-weight:500;color:#888;flex-shrink:0}
-    .section-header{padding:8px 14px;border-bottom:0.5px solid #e0dfd8;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-    .section-title{font-size:12px;font-weight:500;color:#888}
+    /* 안내사항 */
+    .notice-wrap{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.06);margin-bottom:20px;white-space:pre-line;font-size:13px;color:#555;line-height:1.8}
+    .notice-title{font-size:13px;font-weight:500;color:#888;margin-bottom:10px}
 
-    /* 테이블 */
-    .tbl{width:100%;border-collapse:collapse;table-layout:fixed}
-    .tbl th{padding:6px 4px;text-align:left;font-size:11px;font-weight:500;color:#888;border-bottom:0.5px solid #e0dfd8;white-space:nowrap;cursor:pointer;user-select:none}
-    .tbl th:hover{color:#1a1a1a}
-    .tbl td{padding:5px 4px;font-size:11px;border-bottom:0.5px solid #e0dfd8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
-    .tbl tr:last-child td{border-bottom:none}
-    .tbl tr:hover td{background:#f9f9f7}
-    .badge{display:inline-block;padding:1px 5px;border-radius:8px;font-size:10px;font-weight:500}
-    .badge-wait{background:#faeeda;color:#854f0b}
-    .badge-ok{background:#eaf3de;color:#3b6d11}
-    .badge-cancel{background:#f1efe8;color:#5f5e5a}
-    .badge-cancel-req{background:#fcebeb;color:#a32d2d}
-    .badge-block{background:#e6f1fb;color:#185fa5}
-    .btn-sm{padding:2px 7px;font-size:10px;border-radius:4px;cursor:pointer;border:0.5px solid #ccc;background:#fff;font-family:inherit}
-    .btn-confirm{background:#eaf3de;color:#3b6d11;border-color:#c0dd97}
-    .btn-cancel-action{background:#fcebeb;color:#a32d2d;border-color:#f7c1c1}
-    .btn-refund{background:#e6f1fb;color:#185fa5;border-color:#b5d4f4}
-    .btn-confirm:hover{background:#c0dd97}
-    .btn-cancel-action:hover{background:#f7c1c1}
-    .btn-refund:hover{background:#b5d4f4}
-    .btn-cancel-sel{padding:2px 8px;font-size:10px;border-radius:4px;cursor:pointer;border:0.5px solid #f7c1c1;background:#fcebeb;color:#a32d2d;margin-left:auto;font-family:inherit}
-    .edit-cell{cursor:pointer}
-    .edit-cell:hover{color:#378add;text-decoration:underline}
-    .empty-row td{text-align:center;color:#888;padding:18px}
-    .tab-row{display:flex;gap:5px;align-items:center}
-    .tab{padding:3px 10px;border-radius:10px;font-size:11px;cursor:pointer;border:0.5px solid #e0dfd8;background:#fff;color:#888;font-family:inherit}
-    .tab.active-complete{background:#eaf3de;color:#3b6d11;border-color:#c0dd97}
-    .tab.active-cancel{background:#fcebeb;color:#a32d2d;border-color:#f7c1c1}
-    .tab.active-all{background:#e6f1fb;color:#185fa5;border-color:#b5d4f4}
-    .tools-right{margin-left:auto;display:flex;gap:5px}
-    .btn-excel{padding:3px 10px;font-size:11px;border-radius:4px;background:#eaf3de;color:#3b6d11;border:0.5px solid #c0dd97;cursor:pointer;font-family:inherit}
-    .swim-link{color:#378add;cursor:pointer;text-decoration:underline}
-    .bbq-o{color:#3b6d11;font-weight:500;cursor:pointer}
-    .bbq-x{color:#a32d2d;cursor:pointer}
-    .review-o{color:#ba7517;cursor:pointer;font-weight:500}
-    .review-x{color:#ccc;cursor:pointer}
-    input.inline-edit{border:0.5px solid #ccc;border-radius:3px;padding:1px 4px;font-size:11px;width:90px;background:#fff;color:#1a1a1a;font-family:inherit}
-    select.type-sel{border:0.5px solid #ccc;border-radius:3px;padding:1px 3px;font-size:11px;background:#fff;color:#1a1a1a;font-family:inherit}
+    /* 예약 신청 폼 */
+    .book-form{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+    .book-form h2{font-size:15px;font-weight:500;margin-bottom:4px}
+    .book-form-sub{font-size:12px;color:#888;margin-bottom:16px}
+    .form-group{margin-bottom:14px}
+    .form-group label{display:block;font-size:12px;color:#888;margin-bottom:5px}
+    .form-group input{width:100%;border:0.5px solid #ddd;border-radius:8px;padding:10px 12px;font-size:13px;background:#fff;color:#1a1a1a;font-family:inherit}
+    .form-group input:focus{outline:none;border-color:#6daa8f}
+    .opt-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+    .opt-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border:0.5px solid #ddd;border-radius:20px;font-size:12px;cursor:pointer;background:#fff;color:#555;font-family:inherit;transition:all 0.15s}
+    .opt-btn.selected{border-color:#6daa8f;background:#f0f8f0;color:#3b7a5a}
+    .opt-btn input{width:13px;height:13px;accent-color:#6daa8f}
 
-    /* 팝업 공통 */
-    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:998}
-    .overlay.show{display:block}
-    .popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:0.5px solid #ccc;border-radius:12px;padding:20px;z-index:999;min-width:280px;max-width:460px;width:92%;max-height:85vh;overflow-y:auto}
-    .popup.show{display:block}
-    .popup h3{font-size:14px;font-weight:500;margin-bottom:12px}
-    .popup-close{margin-top:12px;padding:4px 12px;font-size:11px;border:0.5px solid #ccc;border-radius:4px;cursor:pointer;background:#f5f5f3;color:#666;font-family:inherit}
-    .big-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:0.5px solid #ccc;border-radius:12px;padding:20px;z-index:999;min-width:340px;max-width:600px;width:94%;max-height:85vh;overflow-y:auto}
-    .big-popup.show{display:block}
-    .big-popup h3{font-size:14px;font-weight:500;margin-bottom:14px}
-    .dropdown{display:none;position:fixed;background:#fff;border:0.5px solid #ccc;border-radius:8px;padding:6px 0;z-index:997;min-width:110px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
-    .dropdown.show{display:block}
-    .dropdown div{padding:6px 14px;font-size:11px;cursor:pointer;color:#1a1a1a}
-    .dropdown div:hover{background:#f5f5f3}
-    .dropdown div.active{color:#185fa5;font-weight:500}
+    /* 약관 */
+    .terms-wrap{margin-bottom:14px}
+    .terms-check-row{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+    .terms-check-row input{width:15px;height:15px;accent-color:#6daa8f;cursor:pointer}
+    .terms-toggle{background:none;border:none;cursor:pointer;font-size:11px;color:#aaa;margin-left:4px;font-family:inherit}
+    .terms-content{display:none;margin-top:10px;padding:12px;background:#f9f9f7;border-radius:8px;font-size:11px;color:#777;line-height:1.8;white-space:pre-line}
+    .terms-content.open{display:block}
+    .terms-fold{display:block;text-align:center;margin-top:6px;font-size:11px;color:#aaa;cursor:pointer}
 
-    /* 예약하기 팝업 */
-    .book-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:0.5px solid #ccc;border-radius:12px;padding:20px;z-index:999;min-width:300px;max-width:420px;width:92%;max-height:90vh;overflow-y:auto}
-    .book-popup.show{display:block}
-    .book-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
-    .book-popup h3{font-size:14px;font-weight:500}
-    .book-subtitle{font-size:12px;color:#666;margin-bottom:14px}
-    .block-check-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:#2980b9;cursor:pointer}
-    .block-check-wrap input{width:13px;height:13px;cursor:pointer;accent-color:#2980b9}
-    .form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-    .form-row label{font-size:11px;color:#888}
-    .form-row input{border:0.5px solid #ccc;border-radius:6px;padding:7px 10px;font-size:12px;background:#fff;color:#1a1a1a;width:100%;font-family:inherit}
-    .form-row input:focus{outline:none;border-color:#378add}
-    .price-preview{background:#f5f5f3;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px}
-    .price-preview-row{display:flex;justify-content:space-between;margin-bottom:4px;color:#666}
-    .price-preview-total{display:flex;justify-content:space-between;font-weight:500;font-size:13px;border-top:0.5px solid #e0dfd8;padding-top:6px;margin-top:4px}
-    .book-actions{display:flex;gap:8px;margin-top:4px}
-    .btn-primary{padding:7px 18px;font-size:12px;border-radius:6px;cursor:pointer;background:#eaf3de;color:#3b6d11;border:0.5px solid #c0dd97;font-weight:500;font-family:inherit}
-    .btn-primary:hover{background:#c0dd97}
-    .btn-primary:disabled{opacity:0.5;cursor:default}
-    .opt-check-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-    .opt-check{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:4px 8px;border:0.5px solid #e0dfd8;border-radius:6px}
-    .opt-check input{width:13px;height:13px}
+    /* 제출 버튼 */
+    .submit-btn{width:100%;padding:14px;background:#3b7a5a;color:#fff;border:none;border-radius:10px;font-size:15px;font-family:inherit;cursor:pointer;font-weight:500;margin-top:4px;transition:background 0.2s}
+    .submit-btn:hover{background:#2f6349}
+    .submit-btn:disabled{background:#bbb;cursor:default}
 
-    /* 설정/할인/옵션 */
-    .price-table{width:100%;border-collapse:collapse;font-size:12px}
-    .price-table th{padding:7px 8px;text-align:left;font-size:11px;color:#888;border-bottom:0.5px solid #e0dfd8;font-weight:500}
-    .price-table td{padding:7px 8px;border-bottom:0.5px solid #e0dfd8;vertical-align:middle}
-    .price-table tr:last-child td{border-bottom:none}
-    .price-input{border:0.5px solid #ccc;border-radius:4px;padding:4px 6px;font-size:11px;width:80px;text-align:right;background:#fff;font-family:inherit}
-    .price-input:focus{outline:none;border-color:#378add}
-    .save-btn{padding:5px 14px;font-size:11px;border-radius:5px;background:#eaf3de;color:#3b6d11;border:0.5px solid #c0dd97;cursor:pointer;margin-top:12px;font-family:inherit}
-    .setting-saved{font-size:11px;color:#3b6d11;margin-left:8px;display:none}
-    .sub-section{margin-top:14px;padding-top:14px;border-top:0.5px solid #e0dfd8}
-    .sub-section h4{font-size:12px;font-weight:500;margin-bottom:10px;color:#555}
-    .disc-form{background:#f9f9f7;border-radius:8px;padding:14px;margin-bottom:14px}
-    .df-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;align-items:center}
-    .df-row label{font-size:11px;color:#888;width:56px;flex-shrink:0}
-    .df-row input[type=date],.df-row input[type=number],.df-row input[type=text]{border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;font-family:inherit}
-    .df-row input[type=date]{width:130px}
-    .df-row input[type=number]{width:90px}
-    .df-row input[type=text]{width:160px}
-    .df-row select{border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;font-family:inherit}
-    .room-checks{display:flex;gap:6px;flex-wrap:wrap}
-    .room-check{display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer}
-    .room-check input{width:12px;height:12px}
-    .disc-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f5f5f3;border-radius:6px;margin-bottom:6px;font-size:11px}
-    .disc-item .di-info{flex:1}
-    .di-del{padding:2px 8px;font-size:10px;border-radius:4px;cursor:pointer;border:0.5px solid #f7c1c1;background:#fcebeb;color:#a32d2d;font-family:inherit}
-    .btn-add{padding:5px 14px;font-size:11px;border-radius:5px;background:#e6f1fb;color:#185fa5;border:0.5px solid #b5d4f4;cursor:pointer;font-family:inherit}
-    .opt-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f9f9f7;border-radius:6px;margin-bottom:6px;font-size:11px;flex-wrap:wrap}
-    .opt-toggle{padding:2px 8px;font-size:10px;border-radius:4px;cursor:pointer;border:0.5px solid #ccc;background:#fff;font-family:inherit}
-    .opt-toggle.on{background:#eaf3de;color:#3b6d11;border-color:#c0dd97}
-    .opt-toggle.off{background:#f1efe8;color:#888;border-color:#d3d1c7}
-    .sch-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f0f5ff;border-radius:6px;margin-bottom:6px;font-size:11px}
-    .sch-item .si-info{flex:1}
-    .si-del{padding:2px 8px;font-size:10px;border-radius:4px;cursor:pointer;border:0.5px solid #b5d4f4;background:#e6f1fb;color:#185fa5;font-family:inherit}
+    /* 성공 메시지 */
+    .success-msg{text-align:center;padding:40px 20px}
+    .success-msg .icon{font-size:48px;margin-bottom:16px}
+    .success-msg h2{font-size:18px;font-weight:500;margin-bottom:8px}
+    .success-msg p{font-size:13px;color:#888;line-height:1.8}
 
-    /* 고객 상세 */
-    .detail-grid{display:grid;grid-template-columns:80px 1fr;gap:5px 8px;font-size:12px}
-    .detail-grid span:nth-child(odd){color:#888}
-    .detail-section{margin-top:12px;padding-top:10px;border-top:0.5px solid #e0dfd8}
-    .detail-section h4{font-size:12px;font-weight:500;color:#555;margin-bottom:8px}
-    textarea.detail-ta{border:0.5px solid #ccc;border-radius:6px;padding:6px 8px;font-size:11px;width:100%;min-height:56px;resize:vertical;background:#fff;color:#1a1a1a;margin-top:4px;font-family:inherit}
-    textarea.detail-ta:focus{outline:none;border-color:#378add}
-    .detail-save-btn{padding:4px 12px;font-size:11px;border-radius:4px;background:#eaf3de;color:#3b6d11;border:0.5px solid #c0dd97;cursor:pointer;margin-top:6px;font-family:inherit}
-    .detail-row{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
-    .detail-row label{font-size:11px;color:#888}
-    .detail-row input{border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;width:100%;background:#fff;font-family:inherit}
-    .detail-row input:focus{outline:none;border-color:#378add}
-
-    /* 일정추가 팝업 */
-    .schedule-popup{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:0.5px solid #ccc;border-radius:12px;padding:20px;z-index:999;min-width:300px;max-width:400px;width:92%}
-    .schedule-popup.show{display:block}
-    .schedule-popup h3{font-size:14px;font-weight:500;margin-bottom:14px}
+    /* 에러 */
+    .err-bar{padding:10px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin-bottom:12px;display:none}
   </style>
 </head>
 <body>
-<div class="board">
-  <div id="globalError" style="display:none" class="error-bar"></div>
+<div class="page">
+  <div class="site-header">
+    <div class="site-title">🌲 트리하우스</div>
+    <div class="site-sub">예약 신청</div>
+  </div>
 
   <!-- 캘린더 -->
-  <div class="section">
-    <div class="cal-top">
-      <div class="cal-tools">
-        <button id="btnDiscount" onclick="openDiscountPopup()">할인</button>
-        <button id="btnOption" onclick="openOptionPopup()">옵션</button>
-        <button id="btnSetting" onclick="openSettingPopup()">설정</button>
-      </div>
-      <div class="cal-nav">
-        <button onclick="changeMonth(-1)">&#8249;</button>
-        <span class="cal-month" id="calMonthLabel"></span>
-        <button onclick="changeMonth(1)">&#8250;</button>
-        <button id="btnCustomer" onclick="openCustomerMgmt()" style="font-size:11px;color:#bbb;background:none;border:none;cursor:pointer;margin-left:10px;font-family:inherit">고객화면관리</button>
-        <button onclick="openScheduleAddPopup()" style="font-size:11px;color:#bbb;background:none;border:none;cursor:pointer;margin-left:6px;font-family:inherit">일정추가</button>
-        <a href="customer.html" target="_blank" style="font-size:11px;color:#bbb;text-decoration:none;margin-left:6px">고객화면</a>
-      </div>
+  <div class="cal-wrap">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button onclick="changeMonth(1)">&#8250;</button>
     </div>
     <div class="cal-grid" id="calGrid"></div>
-
   </div>
 
-  <!-- 날짜별 -->
-  <div class="section">
-    <div class="date-header">
-      <span class="section-label">1.</span>
-      <div class="date-nav-inner">
-        <button onclick="changeDay(-1)">&#8249;</button>
-        <span class="date-label" id="dateSectionLabel"></span>
-        <button onclick="changeDay(1)">&#8250;</button>
-      </div>
-      <button class="btn-cancel-sel" onclick="cancelSelected('date')">취소</button>
+  <!-- 안내사항 -->
+  <div class="notice-wrap" id="noticeWrap" style="display:none">
+    <div class="notice-title">안내사항</div>
+    <div id="noticeText"></div>
+  </div>
+
+  <!-- 예약 신청 폼 -->
+  <div class="book-form" id="bookFormWrap" style="display:none">
+    <h2 id="bookFormTitle">예약 신청</h2>
+    <div class="book-form-sub" id="bookFormSub"></div>
+    <div class="err-bar" id="formErrBar"></div>
+
+    <div class="form-group">
+      <label>이름 *</label>
+      <input type="text" id="cName" placeholder="홍길동" oninput="checkForm()">
     </div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th style="width:22px"><input type="checkbox" id="chkAllDate" style="width:11px" onchange="toggleAllCheck('date',this.checked)"></th>
-          <th style="width:62px">신청일</th>
-          <th style="width:62px">방문일</th>
-          <th style="width:62px">객실</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
-          <th style="width:108px">연락처</th>
-          <th style="width:36px">도착</th>
-          <th style="width:68px">결제금액</th>
-          <th style="width:90px">메모</th>
-          <th style="width:22px">후기</th>
-          <th style="width:120px">관리자메모</th>
-          <th style="width:46px">상태</th>
-        </tr></thead>
-        <tbody id="dateTbody"><tr class="empty-row"><td colspan="15">불러오는 중...</td></tr></tbody>
-      </table>
+    <div class="form-group">
+      <label>연락처 *</label>
+      <input type="tel" id="cPhone" placeholder="010 0000 0000" maxlength="13" oninput="formatPhone(this)" onchange="checkForm()">
     </div>
-  </div>
-
-  <!-- 승인 대기 -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-title">2. 승인 대기</span>
-      <span id="waitCount" style="font-size:11px;color:#854f0b"></span>
+    <div class="form-group">
+      <label>인원수 *</label>
+      <input type="number" id="cPeople" placeholder="2" min="1" max="20" value="2">
     </div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th style="width:22px"><input type="checkbox" style="width:11px"></th>
-          <th style="width:62px">신청일</th>
-          <th style="width:62px">방문일</th>
-          <th style="width:62px">객실</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
-          <th style="width:108px">연락처</th>
-          <th style="width:68px">결제금액</th>
-          <th style="width:58px">상태</th>
-          <th>메모</th>
-          <th style="width:80px">처리</th>
-        </tr></thead>
-        <tbody id="waitTbody"><tr class="empty-row"><td colspan="13" style="text-align:center;padding:18px;color:#888">불러오는 중...</td></tr></tbody>
-      </table>
+    <div class="form-group">
+      <label>현금영수증 번호</label>
+      <input type="text" id="cReceipt" placeholder="연락처와 다를 경우 기재">
     </div>
-  </div>
-
-  <!-- 전체목록 -->
-  <div class="section">
-    <div class="section-header">
-      <span class="section-title">3.</span>
-      <div class="tab-row" id="tabRow">
-        <button class="tab active-complete" onclick="setTab('예약완료')">완료</button>
-        <button class="tab" onclick="setTab('취소')">취소</button>
-        <button class="tab" onclick="setTab('all')">전체</button>
-      </div>
-      <button class="btn-cancel-sel" onclick="cancelSelected('all')">취소</button>
-      <div class="tools-right">
-        <button class="btn-excel" onclick="exportCSV()">엑셀 추출</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="tbl">
-        <thead><tr>
-          <th style="width:22px"><input type="checkbox" id="chkAllAll" style="width:11px" onchange="toggleAllCheck('all',this.checked)"></th>
-          <th style="width:62px" onclick="sortToggle('booking_date')" id="thCreated">신청일</th>
-          <th style="width:62px" onclick="sortToggle('visit_date')" id="thDate">방문일↓</th>
-          <th style="width:66px" id="thRoom" onclick="openRoomDropdown(event)">객실▾</th>
-          <th style="width:50px">이름</th>
-          <th style="width:32px">인원</th>
-          <th style="width:36px">수영</th>
-          <th style="width:22px">BBQ</th>
-          <th style="width:108px">연락처</th>
-          <th style="width:36px">도착</th>
-          <th style="width:68px">결제금액</th>
-          <th style="width:90px">메모</th>
-          <th style="width:22px">후기</th>
-          <th style="width:120px">관리자메모</th>
-          <th style="width:46px">상태</th>
-        </tr></thead>
-        <tbody id="allTbody"><tr class="empty-row"><td colspan="15" style="text-align:center;padding:18px;color:#888">불러오는 중...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="overlay" onclick="closeAll()"></div>
-
-<!-- 고객 상세 팝업 -->
-<div class="popup" id="detailPopup">
-  <h3 id="popupName"></h3>
-  <div id="popupBody"></div>
-  <div class="detail-section">
-    <h4>방문 기록</h4>
-    <div class="detail-grid" id="visitHistory"></div>
-  </div>
-  <div class="detail-section">
-    <h4>동행인</h4>
-    <div class="detail-row"><label>이름</label><input type="text" id="companionName" placeholder="동행인 이름"></div>
-    <div class="detail-row"><label>연락처</label><input type="text" id="companionPhone" placeholder="동행인 연락처"></div>
-  </div>
-  <div class="detail-section">
-    <h4>후기</h4>
-    <textarea class="detail-ta" id="reviewText" placeholder="후기 내용을 입력하세요"></textarea>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:10px">
-    <button class="detail-save-btn" onclick="saveDetail()">저장</button>
-    <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
-  </div>
-</div>
-
-<!-- 수영시간 팝업 -->
-<div class="popup" id="swimPopup" style="min-width:180px;max-width:220px">
-  <h3>수영 시간 변경</h3>
-  <div id="swimOptions" style="display:flex;flex-direction:column;gap:5px;margin:8px 0"></div>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
-
-<!-- 스케줄 상세 팝업 -->
-<div class="popup" id="scheduleViewPopup" style="min-width:220px">
-  <h3 id="schViewTitle"></h3>
-  <div id="schViewBody" style="font-size:12px;color:#555;margin-bottom:8px"></div>
-  <button class="di-del" id="schViewDel" onclick="deleteScheduleFromView()">삭제</button>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
-
-<!-- 예약하기 / 예약막기 팝업 -->
-<div class="book-popup" id="bookPopup">
-  <div class="book-header">
-    <div>
-      <h3 id="bookTitle">예약하기</h3>
-      <div class="book-subtitle" id="bookSubtitle"></div>
-    </div>
-    <label class="block-check-wrap">
-      <input type="checkbox" id="isBlockCheck" onchange="onBlockToggle()"> 예약막기
-    </label>
-  </div>
-  <!-- 일반 예약 폼 -->
-  <div id="bookNormalForm">
-    <div class="form-row"><label>이름 *</label><input type="text" id="bookName" placeholder="홍길동"></div>
-    <div class="form-row"><label>연락처 *</label><input type="text" id="bookPhone" placeholder="01012345678"></div>
-    <div class="form-row"><label>인원수 *</label><input type="number" id="bookPeople" placeholder="2" min="1" max="50" value="2" oninput="calcPrice()"></div>
-    <div class="form-row" id="optionsSection">
+    <div class="form-group" id="cOptSection" style="display:none">
       <label>옵션</label>
-      <div class="opt-check-row" id="bookOptions"></div>
+      <div class="opt-list" id="cOptList"></div>
     </div>
-    <div class="form-row"><label>현금영수증 <span style="font-size:10px;color:#aaa">(선택)</span></label><input type="text" id="bookReceipt" placeholder="사업자번호 또는 휴대폰번호"></div>
-    <div class="price-preview" id="pricePreview">
-      <div class="price-preview-row"><span id="baseLabel">기본</span><span id="baseAmt">-</span></div>
-      <div class="price-preview-row" id="extraRow" style="display:none"><span id="extraLabel">추가 인원</span><span id="extraAmt">-</span></div>
-      <div id="optPriceRows"></div>
-      <div class="price-preview-total"><span>합계</span><span id="totalAmt">-</span></div>
+
+    <!-- 약관 -->
+    <div class="terms-wrap">
+      <div class="terms-check-row">
+        <input type="checkbox" id="cTerms" onchange="checkForm()">
+        <span>개인정보 및 이용약관에 동의합니다</span>
+        <button class="terms-toggle" onclick="toggleTerms()">더보기 ∨</button>
+      </div>
+      <div class="terms-content" id="termsContent">개인정보 수집 및 이용 동의
+
+수집 항목: 이름, 연락처, 현금영수증 번호 (선택)
+수집 목적: 예약 확인 및 안내
+보유 기간: 예약 종료 후 1년
+
+이용약관
+
+1. 예약 신청 후 관리자 확인 후 확정 연락 드립니다.
+2. 취소 및 환불은 예약 확정 후 별도 안내 기준을 따릅니다.
+3. 당일 취소는 환불이 불가할 수 있습니다.
+4. 바베큐 신청은 전날까지 가능합니다.
+5. 반려동물은 동반 불가합니다.
+6. 시설 내 흡연은 금지입니다.
+<button class="terms-fold" onclick="toggleTerms()">^ 접기</button></div>
     </div>
-  </div>
-  <!-- 예약막기 폼 -->
-  <div id="bookBlockForm" style="display:none">
-    <div class="form-row"><label>사유 <span style="font-size:10px;color:#aaa">(선택)</span></label><input type="text" id="blockReason" placeholder="예: 청소, 개인 일정"></div>
-    <div style="font-size:11px;color:#2980b9;padding:8px 0">이 날짜/객실은 고객화면에서 선택 불가능해집니다.</div>
-  </div>
-  <div class="book-actions">
-    <button class="btn-primary" id="bookSaveBtn" onclick="saveBooking()">저장</button>
-    <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
-  </div>
-</div>
 
-<!-- 고객화면관리 팝업 -->
-<div class="big-popup" id="customerMgmtPopup">
-  <h3>고객화면 관리</h3>
-  <div class="sub-section" style="margin-top:0;padding-top:0;border-top:none">
-    <h4>안내사항</h4>
-    <p style="font-size:11px;color:#aaa;margin-bottom:6px">고객화면 캘린더 아래에 표시됩니다.</p>
-    <textarea id="mgmtNotice" style="width:100%;height:120px;border:0.5px solid #ccc;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>
+    <button class="submit-btn" id="submitBtn" onclick="submitBooking()" disabled style="background:#ccc;cursor:default">예약 신청</button>
   </div>
-  <div class="sub-section">
-    <h4>이용약관</h4>
-    <p style="font-size:11px;color:#aaa;margin-bottom:6px">예약 신청 시 "더보기"를 누르면 표시됩니다.</p>
-    <textarea id="mgmtTerms" style="width:100%;height:200px;border:0.5px solid #ccc;border-radius:6px;padding:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>
-  </div>
-  <div style="display:flex;align-items:center;margin-top:14px">
-    <button class="save-btn" onclick="saveCustomerMgmt()">저장</button>
-    <span class="setting-saved" id="customerMgmtSaved">저장되었습니다!</span>
-  </div>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
 
-<!-- 일정추가 팝업 -->
-<div class="schedule-popup" id="scheduleAddPopup">
-  <h3>일정 추가</h3>
-  <div class="form-row"><label>날짜 *</label><input type="date" id="schAddDate"></div>
-  <div class="form-row">
-    <label>종류 *</label>
-    <select id="schAddType" style="border:0.5px solid #ccc;border-radius:6px;padding:7px 10px;font-size:12px;background:#fff;font-family:inherit">
-      <option value="답사">답사</option>
-      <option value="웨딩상담">웨딩상담</option>
-      <option value="촬영">촬영</option>
-      <option value="청소">청소</option>
-      <option value="기타">기타 일정</option>
-    </select>
+  <!-- 성공 메시지 -->
+  <div class="success-msg" id="successMsg" style="display:none">
+    <div class="icon">🎉</div>
+    <h2>예약 신청 완료!</h2>
+    <p>예약 신청이 접수되었습니다.<br>확인 후 연락드리겠습니다.<br><br>감사합니다 🌲</p>
   </div>
-  <div class="form-row"><label>내용 <span style="font-size:10px;color:#aaa">(선택)</span></label><input type="text" id="schAddNote" placeholder="내용"></div>
-  <div class="form-row">
-    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-      <input type="checkbox" id="schAddToReservations" style="width:13px;height:13px">
-      <span>예약 목록에도 추가</span>
-    </label>
-    <span style="font-size:10px;color:#aaa;margin-top:3px">체크 시 예약 테이블에도 저장됩니다</span>
-  </div>
-  <div class="book-actions">
-    <button class="btn-primary" onclick="saveScheduleAdd()">저장</button>
-    <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
-  </div>
-</div>
-
-<!-- 설정 팝업 -->
-<div class="big-popup" id="settingPopup">
-  <h3>가격 설정</h3>
-  <table class="price-table">
-    <thead><tr><th>객실</th><th>기준인원</th><th>최대인원</th><th>주중가격</th><th>주말가격</th><th>추가/인</th><th>할인가/인</th></tr></thead>
-    <tbody id="priceTbody"></tbody>
-  </table>
-  <div style="display:flex;align-items:center;margin-top:14px">
-    <button class="save-btn" onclick="savePricing()">저장</button>
-    <span class="setting-saved" id="settingSaved">저장되었습니다!</span>
-  </div>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
-
-<!-- 할인 팝업 -->
-<div class="big-popup" id="discountPopup">
-  <h3>할인 기간 설정</h3>
-  <div class="disc-form">
-    <div class="df-row"><label>기간</label><input type="date" id="discStart"><span style="font-size:11px;color:#888">~</span><input type="date" id="discEnd"></div>
-    <div class="df-row"><label>객실</label><div class="room-checks" id="discRooms">
-      <label class="room-check"><input type="checkbox" value="허클베리"> 허클베리</label>
-      <label class="room-check"><input type="checkbox" value="톰소여"> 톰소여</label>
-      <label class="room-check"><input type="checkbox" value="상수리"> 상수리</label>
-      <label class="room-check"><input type="checkbox" value="은행"> 은행</label>
-      <label class="room-check"><input type="checkbox" value="비버튼"> 비버튼</label>
-    </div></div>
-    <div class="df-row"><label>주중가격</label><input type="number" id="discWeekday" placeholder="기본가 유지">원</div>
-    <div class="df-row"><label>주말가격</label><input type="number" id="discWeekend" placeholder="기본가 유지">원</div>
-    <div class="df-row"><label>공휴일가</label><input type="number" id="discHoliday" placeholder="주말가 적용">원</div>
-    <div class="df-row"><label>메모</label><input type="text" id="discNote" placeholder="예: 비수기 할인"></div>
-    <button class="btn-add" onclick="addDiscount()">추가</button>
-  </div>
-  <div id="discountList"></div>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
-
-<!-- 옵션 팝업 -->
-<div class="big-popup" id="optionPopup">
-  <h3>옵션 관리</h3>
-  <div id="optionList"></div>
-  <div class="sub-section">
-    <h4>새 옵션 추가</h4>
-    <div class="df-row"><label>옵션명</label><input type="text" id="newOptName" placeholder="예: 모닥불"></div>
-    <div class="df-row"><label>정가</label><input type="number" id="newOptPrice" placeholder="30000">원</div>
-    <div class="df-row"><label>할인가</label><input type="number" id="newOptDiscount" placeholder="20000">원</div>
-    <div class="df-row"><label>적용 객실</label><div class="room-checks" id="newOptRooms">
-      <label class="room-check"><input type="checkbox" value="허클베리"> 허클베리</label>
-      <label class="room-check"><input type="checkbox" value="톰소여"> 톰소여</label>
-      <label class="room-check"><input type="checkbox" value="상수리"> 상수리</label>
-      <label class="room-check"><input type="checkbox" value="은행"> 은행</label>
-      <label class="room-check"><input type="checkbox" value="비버튼"> 비버튼</label>
-    </div></div>
-    <div class="df-row"><label>메모</label><input type="text" id="newOptNote" placeholder="옵션 설명"></div>
-    <button class="btn-add" style="margin-top:4px" onclick="addOption()">추가</button>
-  </div>
-  <button class="popup-close" onclick="closeAll()">닫기</button>
-</div>
-
-<!-- 객실 드롭다운 -->
-<div class="dropdown" id="roomDropdown">
-  <div onclick="setRoomFilter(null)" id="rf-all" class="active">전체</div>
-  <div onclick="setRoomFilter('허클베리')" id="rf-허클베리">허클베리</div>
-  <div onclick="setRoomFilter('톰소여')" id="rf-톰소여">톰소여</div>
-  <div onclick="setRoomFilter('상수리')" id="rf-상수리">상수리</div>
-  <div onclick="setRoomFilter('은행')" id="rf-은행">은행</div>
-  <div onclick="setRoomFilter('비버튼')" id="rf-비버튼">비버튼</div>
-  <div onclick="setRoomFilter('대관')" id="rf-대관">대관</div>
-  <div onclick="setRoomFilter('웨딩')" id="rf-웨딩">웨딩</div>
-  <div onclick="setRoomFilter('상담')" id="rf-상담">상담</div>
 </div>
 
 <script type="module">
@@ -536,122 +178,80 @@ const sb=createClient(SUPABASE_URL,SUPABASE_KEY)
 const HIDE_FROM='2026-05-26'
 const HIDE_ROOMS=['허클베리','톰소여']
 const ALL_HOUSES=['허클베리','톰소여','상수리','은행','비버튼']
-const ALL_ROOMS=['허클베리','톰소여','상수리','은행','비버튼','대관','웨딩','상담']
-const SWIM_TIMES=['9시','10시','11시','1시','2시','3시','4시']
-const ARRIVE_TIMES=['10시','11시','12시','1시','2시','3시','4시','5시']
 const HOLIDAYS=['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01','2026-05-05','2026-05-25','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25']
 
-let allData=[],pricingData=[],discountData=[],optionsData=[],schedulesData=[]
-let siteSettings={}
-let allTab='예약완료',roomFilter=null,sortField='visit_date',sortDir=-1
-let swimTargetId=null,currentDetailId=null,currentSchId=null
+let allData=[],optionsData=[],pricingData=[],discountData=[]
 let today=new Date(),curYear=today.getFullYear(),curMonth=today.getMonth()
-let selectedDate=new Date(today)
-let bookingCtx={house:'',year:0,month:0,day:0,isWeekend:false,isoDate:''}
+let selectedHouse='',selectedDate='',selectedYear=0,selectedMonth=0,selectedDay=0
 
-// 전역 등록
-const G={changeMonth,changeDay,setTab,openRoomDropdown,setRoomFilter,sortToggle,exportCSV,openCustomerMgmt,saveCustomerMgmt,
-  closeAll,openSettingPopup,openDiscountPopup,openOptionPopup,openDetail,openSwim,
-  toggleBBQ,editCell,updateStatus,saveBooking,calcPrice,savePricing,cancelSelected,
-  toggleAllCheck,saveDetail,toggleReview,doRefund,addDiscount,deleteDiscount,
-  addOption,toggleOption,deleteOption,openScheduleAddPopup,saveScheduleAdd,
-  deleteScheduleFromView,onBlockToggle}
-Object.keys(G).forEach(k=>window[k]=G[k])
+window.changeMonth=changeMonth
+window.toggleTerms=toggleTerms
+window.submitBooking=submitBooking
 
-// ── 데이터 로드 ──
-async function loadAll(){
-  try{
-    const[rr,pr,dr,or,sr,settingsR]=await Promise.all([
-      sb.from('reservations').select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type').order('visit_date',{ascending:true}),
-      sb.from('pricing').select('*'),
-      sb.from('discounts').select('*').order('start_date',{ascending:true}),
-      sb.from('options').select('*'),
-      sb.from('schedules').select('*').order('schedule_date',{ascending:true}),
-      sb.from('site_settings').select('*')
-    ])
-    if(rr.error)throw rr.error
-    allData=rr.data||[];pricingData=pr.data||[];discountData=dr.data||[]
-    optionsData=or.data||[];schedulesData=sr.data||[]
-    // site_settings 캐시
-    if(settingsR&&settingsR.data)settingsR.data.forEach(s=>{siteSettings[s.key]=s.value})
-    setDefaultDate();buildCalendar();buildDateSection();buildWait();buildAll()
-  }catch(e){console.error('[loadAll]',e);showError('데이터 로드 실패: '+e.message)}
+function formatPhone(input){
+  let v=input.value.replace(/\D/g,'').substring(0,11)
+  if(v.length<=3)input.value=v
+  else if(v.length<=7)input.value=v.slice(0,3)+' '+v.slice(3)
+  else input.value=v.slice(0,3)+' '+v.slice(3,7)+' '+v.slice(7)
+  checkForm()
 }
 
-async function reloadReservations(){
-  const{data,error}=await sb.from('reservations')
-    .select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type')
-    .order('visit_date',{ascending:true})
-  if(error){console.error('[reloadReservations]',error);showError('데이터 갱신 실패: '+error.message);return}
-  allData=data||[]
-  buildCalendar();buildDateSection();buildWait();buildAll()
+function checkForm(){
+  const name=document.getElementById('cName').value.trim()
+  const phone=document.getElementById('cPhone').value.replace(/\s/g,'')
+  const terms=document.getElementById('cTerms').checked
+  const btn=document.getElementById('submitBtn')
+  const valid=name.length>0&&phone.length===11&&terms
+  btn.disabled=!valid
+  btn.style.background=valid?'#3b7a5a':'#ccc'
+  btn.style.cursor=valid?'pointer':'default'
+}
+
+async function init(){
+  try{
+    const[rr,or,pr,dr,sr]=await Promise.all([
+      sb.from('reservations').select('visit_date,room_name,status,is_cancelled,booking_type').order('visit_date',{ascending:true}),
+      sb.from('options').select('*').eq('is_active',true),
+      sb.from('pricing').select('*'),
+      sb.from('discounts').select('*'),
+      sb.from('site_settings').select('*')
+    ])
+    allData=rr.data||[];optionsData=or.data||[];pricingData=pr.data||[];discountData=dr.data||[]
+    // 안내사항 + 약관
+    if(sr.data){
+      const notice=sr.data.find(s=>s.key==='customer_notice')
+      const terms=sr.data.find(s=>s.key==='customer_terms')
+      if(notice&&notice.value){
+        document.getElementById('noticeText').textContent=notice.value
+        document.getElementById('noticeWrap').style.display='block'
+      }
+      if(terms&&terms.value){
+        document.getElementById('termsContent').innerHTML=terms.value.replace(/\n/g,'<br>')+
+          '<button class="terms-fold" onclick="toggleTerms()">^ 접기</button>'
+      }
+    }
+    buildCalendar()
+  }catch(e){console.error('[init]',e)}
 }
 
 function getVisibleHouses(iso){
   if(iso>=HIDE_FROM)return ALL_HOUSES.filter(h=>!HIDE_ROOMS.includes(h))
   return ALL_HOUSES
 }
-function getPricing(r){return pricingData.find(p=>p.room_name===r)||null}
-function isWeekendDate(y,m,d){const dow=new Date(y,m-1,d).getDay();return dow===0||dow===6}
-function isHolidayISO(iso){return HOLIDAYS.includes(iso)}
 
-function calcTotalPrice(room,people,selectedOpts,isWeekend,iso){
-  const p=getPricing(room);if(!p)return 0
-  const disc=discountData.find(d=>d.room_name===room&&iso>=d.start_date&&iso<=d.end_date)
-  let base
-  if(disc){
-    const isHol=isHolidayISO(iso)
-    if(isHol&&disc.holiday_price)base=disc.holiday_price
-    else if(isWeekend&&disc.weekend_price)base=disc.weekend_price
-    else if(!isWeekend&&disc.weekday_price)base=disc.weekday_price
-    else base=isWeekend?p.weekend_price:p.weekday_price
-  }else{base=isWeekend?p.weekend_price:p.weekday_price}
-  const extra=Math.max(0,people-p.base_people)
-  const unit=p.season_discount>0?p.season_discount:p.extra_per_person
-  const optTotal=selectedOpts.reduce((sum,oid)=>{const o=optionsData.find(x=>x.id===oid);return sum+(o?(o.discount_price||o.price):0)},0)
-  return base+(extra*unit)+optTotal
+function isTaken(house,isoDay){
+  return allData.some(r=>
+    r.room_name===house&&
+    r.visit_date&&r.visit_date.startsWith(isoDay)&&
+    !r.is_cancelled&&r.status!=='취소'&&r.status!=='취소요청'
+  )
 }
 
-function setDefaultDate(){
-  const ti=fmtISO(today)
-  const f=allData.filter(r=>r.visit_date&&r.visit_date>=ti&&!r.is_cancelled&&r.status!=='취소'&&r.booking_type!=='block').map(r=>r.visit_date.substring(0,10)).sort()
-  if(f.length>0){selectedDate=new Date(f[0]+'T09:00:00');curYear=selectedDate.getFullYear();curMonth=selectedDate.getMonth()}
-}
-
-function fmtISO(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function pad(n){return String(n).padStart(2,'0')}
-function dayLabel(d){return['일','월','화','수','목','금','토'][d.getDay()]}
-function fmtDate(iso){if(!iso)return'-';const[y,m,d]=iso.substring(0,10).split('-');return`${m}/${d}/${String(y).slice(2)}`}
+function fmtISO(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function isHoliday(y,m,d){return HOLIDAYS.includes(`${y}-${pad(m+1)}-${pad(d)}`)}
-function showError(msg){const el=document.getElementById('globalError');el.textContent=msg;el.style.display='block'}
-function fmt(n){return Number(n).toLocaleString()}
-function fmtArrival(raw){
-  if(!raw)return'-'
-  const s=String(raw).replace(/:/g,'').replace(/\s/g,'')
-  if(s.length===3)return`${s[0]}:${s.slice(1)}`
-  if(s.length===4)return`${s.slice(0,2)}:${s.slice(2)}`
-  return raw
-}
+function isWeekend(y,m,d){const dow=new Date(y,m,d).getDay();return dow===0||dow===6}
 
-function toggleAllCheck(section,checked){
-  document.getElementById(section==='date'?'dateTbody':'allTbody').querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=checked)
-}
-
-async function cancelSelected(section){
-  const tbody=document.getElementById(section==='date'?'dateTbody':'allTbody')
-  const ids=[...tbody.querySelectorAll('input[type=checkbox]:checked')].map(c=>c.dataset.id).filter(Boolean)
-  if(!ids.length){alert('취소할 예약을 선택해주세요.');return}
-  if(!confirm(`${ids.length}건을 취소요청 처리하시겠습니까?`))return
-  try{
-    for(const id of ids){
-      const{error}=await sb.from('reservations').update({status:'취소요청',updated_at:new Date().toISOString()}).eq('id',id)
-      if(error)throw error
-    }
-    await reloadReservations()
-  }catch(e){console.error('[cancelSelected]',e);showError('저장에 실패했습니다: '+e.message)}
-}
-
-// ── 캘린더 ──
 function buildCalendar(){
   document.getElementById('calMonthLabel').textContent=`${curYear}년 ${curMonth+1}월`
   const grid=document.getElementById('calGrid');grid.innerHTML=''
@@ -659,616 +259,150 @@ function buildCalendar(){
     const el=document.createElement('div');el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');el.textContent=d;grid.appendChild(el)
   })
   const first=new Date(curYear,curMonth,1);const startDay=first.getDay()
+  // 이전달 빈칸
   const prevY=curMonth===0?curYear-1:curYear;const prevM=curMonth===0?11:curMonth-1
   const prevDays=new Date(prevY,prevM+1,0).getDate()
   for(let i=0;i<startDay;i++){
-    const d=prevDays-startDay+1+i;const isoDay=`${prevY}-${pad(prevM+1)}-${pad(d)}`
-    const el=buildCalCell(d,prevY,prevM,isoDay,true)
-    el.onclick=(e)=>{if(e.target.classList.contains('cal-item')||e.target.classList.contains('cal-schedule'))return;curYear=prevY;curMonth=prevM;selectedDate=new Date(prevY,prevM,d);buildCalendar();buildDateSection()}
+    const d=prevDays-startDay+1+i
+    const el=document.createElement('div');el.className='cal-cell other-month'
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
     grid.appendChild(el)
   }
   const days=new Date(curYear,curMonth+1,0).getDate()
+  const todayISO=fmtISO(today)
   for(let d=1;d<=days;d++){
     const isoDay=`${curYear}-${pad(curMonth+1)}-${pad(d)}`
-    const el=buildCalCell(d,curYear,curMonth,isoDay,false)
-    el.onclick=(e)=>{if(e.target.classList.contains('cal-item')||e.target.classList.contains('cal-schedule'))return;selectedDate=new Date(curYear,curMonth,d);buildCalendar();buildDateSection()}
+    const isPast=isoDay<todayISO
+    const el=document.createElement('div');el.className='cal-cell'
+    const dow=(startDay+d-1)%7
+    if(dow===0)el.classList.add('col-sun');if(dow===6)el.classList.add('col-sat')
+    if(isHoliday(curYear,curMonth,d))el.classList.add('col-holiday')
+    if(isoDay===selectedDate)el.classList.add('selected-day')
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    const visible=getVisibleHouses(isoDay)
+    visible.forEach(h=>{
+      const taken=isTaken(h,isoDay)
+      const span=document.createElement('div')
+      if(isPast||taken){
+        span.className='c-room taken';span.textContent=h
+      }else{
+        span.className='c-room free';span.textContent=h
+        span.onclick=()=>selectRoom(h,curYear,curMonth+1,d,isoDay)
+      }
+      el.appendChild(span)
+    })
     grid.appendChild(el)
   }
+  // 다음달 빈칸
   const nextY=curMonth===11?curYear+1:curYear;const nextM=curMonth===11?0:curMonth+1
   const total=startDay+days;const rem=(7-total%7)%7
   for(let d=1;d<=rem;d++){
-    const isoDay=`${nextY}-${pad(nextM+1)}-${pad(d)}`
-    const el=buildCalCell(d,nextY,nextM,isoDay,true)
-    el.onclick=(e)=>{if(e.target.classList.contains('cal-item')||e.target.classList.contains('cal-schedule'))return;curYear=nextY;curMonth=nextM;selectedDate=new Date(nextY,nextM,d);buildCalendar();buildDateSection()}
+    const el=document.createElement('div');el.className='cal-cell other-month'
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
     grid.appendChild(el)
   }
 }
 
-function getCalItemClass(status,bookingType,isOther){
-  if(bookingType==='block')return isOther?'other-blocked':'blocked'
-  if(status==='예약완료')return isOther?'other-confirmed':'confirmed'
-  if(status==='대기'||status==='취소요청')return isOther?'other-pending':'pending'
-  return isOther?'other-available':'available'
+function selectRoom(house,y,m,d,isoDay){
+  selectedHouse=house;selectedDate=isoDay;selectedYear=y;selectedMonth=m;selectedDay=d
+  buildCalendar()
+  // 폼 표시
+  const wknd=isWeekend(y,m-1,d)
+  document.getElementById('bookFormTitle').textContent=`예약 신청`
+  document.getElementById('bookFormSub').textContent=`${house}  ·  ${y}년 ${m}월 ${d}일 (${wknd?'주말':'주중'})`
+  // 옵션 표시
+  const opts=optionsData.filter(o=>(o.apply_rooms||[]).includes(house))
+  const optSection=document.getElementById('cOptSection')
+  const optList=document.getElementById('cOptList')
+  optList.innerHTML=''
+  if(opts.length){
+    opts.forEach(o=>{
+      const btn=document.createElement('label');btn.className='opt-btn'
+      btn.innerHTML=`<input type="checkbox" value="${o.id}"> ${o.name} (+${Number(o.discount_price||o.price).toLocaleString()}원)`
+      optList.appendChild(btn)
+    })
+    optSection.style.display='block'
+  }else{optSection.style.display='none'}
+  document.getElementById('bookFormWrap').style.display='block'
+  document.getElementById('bookFormWrap').scrollIntoView({behavior:'smooth',block:'start'})
 }
 
-function buildCalCell(d,y,m,isoDay,isOther){
-  const el=document.createElement('div')
-  el.className='cal-cell'+(isOther?' other-month':'')
-  const dow=new Date(y,m,d).getDay()
-  if(dow===0)el.classList.add('col-sun');if(dow===6)el.classList.add('col-sat')
-  if(isHoliday(y,m,d))el.classList.add('col-holiday')
-  const thisDate=new Date(y,m,d)
-  if(!isOther&&thisDate.toDateString()===today.toDateString())el.classList.add('today')
-  if(thisDate.toDateString()===selectedDate.toDateString())el.classList.add('selected')
-  const ds=document.createElement('div');ds.className='cal-date';ds.textContent=d;el.appendChild(ds)
-  const visible=getVisibleHouses(isoDay)
-  // 해당 날짜 예약 현황
-  const dayReservations=allData.filter(r=>r.visit_date&&r.visit_date.startsWith(isoDay)&&!r.is_cancelled&&r.status!=='취소')
-  const roomStatusMap={}
-  dayReservations.forEach(r=>{if(r.room_name)roomStatusMap[r.room_name]={status:r.status,type:r.booking_type}})
-  visible.forEach(h=>{
-    const item=document.createElement('div')
-    const rs=roomStatusMap[h]
-    if(rs){
-      item.className='cal-item '+getCalItemClass(rs.status,rs.type,isOther)
-      item.textContent=h
-    }else{
-      item.className='cal-item '+(isOther?'other-available':'available')
-      item.textContent=h
-      item.onclick=(e)=>{e.stopPropagation();openBooking(h,y,m+1,d,isoDay)}
-    }
-    el.appendChild(item)
-  })
-  // 스케줄
-  schedulesData.filter(s=>s.schedule_date===isoDay).forEach(s=>{
-    const si=document.createElement('div');si.className='cal-schedule'
-    si.textContent='▸ '+s.title
-    si.onclick=(e)=>{e.stopPropagation();openScheduleView(s)}
-    el.appendChild(si)
-  })
-  return el
+function toggleTerms(){
+  const c=document.getElementById('termsContent')
+  c.classList.toggle('open')
 }
 
-// ── 일정 추가 팝업 ──
-function openScheduleAddPopup(){
-  document.getElementById('schAddDate').value=''
-  document.getElementById('schAddNote').value=''
-  document.getElementById('schAddToReservations').checked=false
-  document.getElementById('scheduleAddPopup').classList.add('show')
-  document.getElementById('overlay').classList.add('show')
-}
+async function submitBooking(){
+  const name=document.getElementById('cName').value.trim()
+  const phoneRaw=document.getElementById('cPhone').value.replace(/\s/g,'')
+  const phone=phoneRaw
+  const people=parseInt(document.getElementById('cPeople').value)||0
+  const receipt=document.getElementById('cReceipt').value.trim()
+  const terms=document.getElementById('cTerms').checked
+  const errBar=document.getElementById('formErrBar')
+  errBar.style.display='none'
 
-async function saveScheduleAdd(){
-  const date=document.getElementById('schAddDate').value
-  const type=document.getElementById('schAddType').value
-  const note=document.getElementById('schAddNote').value.trim()
-  const addToRes=document.getElementById('schAddToReservations').checked
-  if(!date){alert('날짜를 선택해주세요.');return}
-  try{
-    // schedules 테이블에 저장
-    const{data:sd,error:se}=await sb.from('schedules').insert([{schedule_date:date,title:type,note:note||null,add_to_reservations:addToRes,updated_at:new Date().toISOString()}]).select()
-    if(se)throw se
-    if(sd&&sd[0])schedulesData.push(sd[0])
-    schedulesData.sort((a,b)=>a.schedule_date.localeCompare(b.schedule_date))
-    // 예약 테이블에도 추가 옵션
-    if(addToRes){
-      const{error:re}=await sb.from('reservations').insert([{
-        visit_date:date,booking_date:fmtISO(today),room_name:'일정',
-        customer_name:type,memo:note||null,status:'예약완료',
-        booking_type:'schedule',is_cancelled:false,people_count:0,
-        created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-      }])
-      if(re)console.warn('[saveScheduleAdd] 예약 테이블 추가 실패:',re)
-    }
-    await reloadReservations()
-    closeAll()
-  }catch(e){console.error('[saveScheduleAdd]',e);showError('일정 저장 실패: '+e.message)}
-}
+  if(!name){errBar.textContent='이름을 입력해주세요.';errBar.style.display='block';return}
+  if(phone.length!==11){errBar.textContent='연락처를 11자리로 입력해주세요. (예: 010 0000 0000)';errBar.style.display='block';return}
+  if(!people){errBar.textContent='인원수를 입력해주세요.';errBar.style.display='block';return}
+  if(!terms){errBar.textContent='이용약관에 동의해주세요.';errBar.style.display='block';return}
+  if(!selectedHouse||!selectedDate){errBar.textContent='캘린더에서 날짜와 객실을 선택해주세요.';errBar.style.display='block';return}
 
-function openScheduleView(s){
-  currentSchId=s.id
-  document.getElementById('schViewTitle').textContent=s.title
-  document.getElementById('schViewBody').textContent=(s.schedule_date||'')+( s.note?' — '+s.note:'')
-  document.getElementById('scheduleViewPopup').classList.add('show')
-  document.getElementById('overlay').classList.add('show')
-}
+  // 중복 재확인
+  const dup=allData.find(r=>r.room_name===selectedHouse&&r.visit_date&&r.visit_date.startsWith(selectedDate)&&!r.is_cancelled&&r.status!=='취소'&&r.status!=='취소요청')
+  if(dup){errBar.textContent='선택하신 날짜/객실은 이미 예약이 있습니다. 다른 날짜를 선택해주세요.';errBar.style.display='block';return}
 
-async function deleteScheduleFromView(){
-  if(!currentSchId||!confirm('일정을 삭제하시겠습니까?'))return
-  const{error}=await sb.from('schedules').delete().eq('id',currentSchId)
-  if(error){showError('삭제 실패: '+error.message);return}
-  schedulesData=schedulesData.filter(s=>s.id!==currentSchId)
-  buildCalendar();closeAll()
-}
+  const selOpts=[...document.querySelectorAll('#cOptList input:checked')].map(c=>c.value)
+  const hasBBQ=selOpts.some(oid=>optionsData.find(o=>o.id===oid&&o.name==='바베큐'))
 
-// ── 예약하기 / 예약막기 팝업 ──
-function onBlockToggle(){
-  const isBlock=document.getElementById('isBlockCheck').checked
-  document.getElementById('bookNormalForm').style.display=isBlock?'none':'block'
-  document.getElementById('bookBlockForm').style.display=isBlock?'block':'none'
-  document.getElementById('bookTitle').textContent=isBlock?'예약막기':'예약하기'
-}
-
-function openBooking(house,y,m,d,isoDay){
-  const weekend=isWeekendDate(y,m,d)
-  bookingCtx={house,year:y,month:m,day:d,isWeekend:weekend,isoDate:isoDay}
-  document.getElementById('bookTitle').textContent='예약하기'
-  document.getElementById('bookSubtitle').textContent=`${house}  ·  ${y}년 ${m}월 ${d}일 (${weekend?'주말':'주중'})`
-  document.getElementById('isBlockCheck').checked=false
-  document.getElementById('bookNormalForm').style.display='block'
-  document.getElementById('bookBlockForm').style.display='none'
-  document.getElementById('blockReason').value=''
-  document.getElementById('bookName').value=''
-  document.getElementById('bookPhone').value=''
-  document.getElementById('bookPeople').value='2'
-  document.getElementById('bookReceipt').value=''
-  document.getElementById('bookSaveBtn').disabled=false
-  document.getElementById('bookSaveBtn').textContent='저장'
-  const opts=optionsData.filter(o=>o.is_active&&(o.apply_rooms||[]).includes(house))
-  const optRow=document.getElementById('bookOptions');optRow.innerHTML=''
-  opts.forEach(o=>{
-    const lbl=document.createElement('label');lbl.className='opt-check'
-    lbl.innerHTML=`<input type="checkbox" value="${o.id}" onchange="calcPrice()"> ${o.name} (+${fmt(o.discount_price||o.price)}원)`
-    optRow.appendChild(lbl)
-  })
-  document.getElementById('optionsSection').style.display=opts.length?'flex':'none'
-  document.getElementById('bookPopup').classList.add('show')
-  document.getElementById('overlay').classList.add('show')
-  calcPrice()
-}
-
-function getSelectedOpts(){return[...document.querySelectorAll('#bookOptions input:checked')].map(c=>c.value)}
-
-function calcPrice(){
-  const people=parseInt(document.getElementById('bookPeople').value)||0
-  const{house,isWeekend,isoDate}=bookingCtx;const p=getPricing(house)
-  if(!p||!people){document.getElementById('pricePreview').style.display='none';return}
-  const disc=discountData.find(d=>d.room_name===house&&isoDate>=d.start_date&&isoDate<=d.end_date)
-  const isHol=isHolidayISO(isoDate)
-  let base
-  if(disc){
-    if(isHol&&disc.holiday_price)base=disc.holiday_price
-    else if(isWeekend&&disc.weekend_price)base=disc.weekend_price
-    else if(!isWeekend&&disc.weekday_price)base=disc.weekday_price
-    else base=isWeekend?p.weekend_price:p.weekday_price
-  }else{base=isWeekend?p.weekend_price:p.weekday_price}
-  const extra=Math.max(0,people-p.base_people)
-  const unit=p.season_discount>0?p.season_discount:p.extra_per_person
-  document.getElementById('baseLabel').textContent=`기본 (${p.base_people}인)`+(disc?' [할인]':'')
-  document.getElementById('baseAmt').textContent=fmt(base)+'원'
-  if(extra>0){document.getElementById('extraRow').style.display='flex';document.getElementById('extraLabel').textContent=`추가 ${extra}인 × ${fmt(unit)}원`;document.getElementById('extraAmt').textContent=fmt(extra*unit)+'원'}
-  else document.getElementById('extraRow').style.display='none'
-  const selOpts=getSelectedOpts()
-  const optRows=document.getElementById('optPriceRows');optRows.innerHTML=''
-  let optTotal=0
-  selOpts.forEach(oid=>{const o=optionsData.find(x=>x.id===oid);if(!o)return;const price=o.discount_price||o.price;optTotal+=price;const row=document.createElement('div');row.className='price-preview-row';row.innerHTML=`<span>${o.name}</span><span>${fmt(price)}원</span>`;optRows.appendChild(row)})
-  document.getElementById('totalAmt').textContent=fmt(base+(extra*unit)+optTotal)+'원'
-  document.getElementById('pricePreview').style.display='block'
-}
-
-async function saveBooking(){
-  const isBlock=document.getElementById('isBlockCheck').checked
-  const{house,year,month,day,isWeekend,isoDate}=bookingCtx
-  const btn=document.getElementById('bookSaveBtn');btn.disabled=true;btn.textContent='저장 중...'
-  try{
-    if(isBlock){
-      // 예약막기
-      const reason=document.getElementById('blockReason').value.trim()
-      const{error}=await sb.from('reservations').insert([{
-        visit_date:`${year}-${pad(month)}-${pad(day)}`,booking_date:fmtISO(today),
-        room_name:house,customer_name:'예약막기',memo:reason||null,
-        status:'예약완료',booking_type:'block',is_cancelled:false,people_count:0,
-        created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-      }])
-      if(error)throw error
-    }else{
-      // 일반 예약
-      const name=document.getElementById('bookName').value.trim()
-      const phone=document.getElementById('bookPhone').value.trim()
-      const people=parseInt(document.getElementById('bookPeople').value)||0
-      const receipt=document.getElementById('bookReceipt').value.trim()
-      if(!name||!phone||!people){alert('이름, 연락처, 인원수는 필수입니다.');btn.disabled=false;btn.textContent='저장';return}
-      // 중복 확인 (예약막기 포함)
-      const dup=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&!r.is_cancelled&&r.status!=='취소'&&r.status!=='취소요청')
-      if(dup){alert(`${house}는 ${fmtDate(isoDate)}에 이미 예약이 있습니다.`);btn.disabled=false;btn.textContent='저장';return}
-      const selOpts=getSelectedOpts()
-      const total=calcTotalPrice(house,people,selOpts,isWeekend,isoDate)
-      const hasBBQ=selOpts.some(oid=>optionsData.find(o=>o.id===oid&&o.name==='바베큐'))
-      const{error}=await sb.from('reservations').insert([{
-        visit_date:`${year}-${pad(month)}-${pad(day)}`,booking_date:fmtISO(today),
-        room_name:house,customer_name:name,customer_phone:phone,people_count:people,
-        bbq:hasBBQ,total_paid:total,status:'대기',is_cancelled:false,booking_type:'reservation',
-        vat_number:receipt||null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-      }])
-      if(error)throw error
-    }
-    console.log('[saveBooking] 성공')
-    btn.textContent='저장됨!'
-    await reloadReservations()
-    setTimeout(()=>closeAll(),1000)
-  }catch(e){console.error('[saveBooking]',e);showError('저장에 실패했습니다: '+e.message);btn.disabled=false;btn.textContent='저장'}
-}
-
-// ── 날짜별 ──
-function buildDateSection(){
-  const d=selectedDate
-  document.getElementById('dateSectionLabel').textContent=`${d.getMonth()+1}/${d.getDate()}(${dayLabel(d)})`
-  const isoDay=fmtISO(d)
-  const rows=allData.filter(r=>r.visit_date&&r.visit_date.startsWith(isoDay))
-  const tbody=document.getElementById('dateTbody');tbody.innerHTML=''
-  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="15">해당 예약이 없습니다</td></tr>';return}
-  rows.forEach(r=>tbody.appendChild(makeRow(r)))
-}
-
-// ── 승인 대기 ──
-function buildWait(){
-  const tbody=document.getElementById('waitTbody');tbody.innerHTML=''
-  const rows=allData.filter(r=>(r.status==='대기'||r.status==='취소요청')&&!r.is_cancelled&&r.booking_type!=='block')
-  document.getElementById('waitCount').textContent=rows.length?`${rows.length}건`:''
-  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="13">대기 중인 예약이 없습니다</td></tr>';return}
-  rows.sort((a,b)=>(a.visit_date||'').localeCompare(b.visit_date||''))
-  rows.forEach(r=>{
-    const tr=document.createElement('tr')
-    const isCR=r.status==='취소요청'
-    const statusBadge=isCR?'<span class="badge badge-cancel-req">취소요청</span>':'<span class="badge badge-wait">대기</span>'
-    const memo=isCR?(r.refund_account?`환불: ${r.refund_account}`:r.memo||'-'):(r.memo||'-')
-    const btns=isCR
-      ?`<button class="btn-sm btn-refund" onclick="doRefund('${r.id}')">환불</button>`
-      :`<button class="btn-sm btn-confirm" onclick="updateStatus('${r.id}','예약완료')">확정</button> <button class="btn-sm btn-cancel-action" onclick="updateStatus('${r.id}','취소요청')">취소</button>`
-    tr.innerHTML=`
-      <td><input type="checkbox" data-id="${r.id}" style="width:11px"></td>
-      <td>${fmtDate(r.booking_date)}</td><td>${fmtDate(r.visit_date)}</td><td>${r.room_name||'-'}</td>
-      <td class="edit-cell" ondblclick="openDetail('${r.id}')">${r.customer_name||'-'}</td>
-      <td class="edit-cell" onclick="editCell(event,'${r.id}','people_count')">${r.people_count?r.people_count+'인':'-'}</td>
-      <td><span class="swim-link" onclick="openSwim(event,'${r.id}')">${r.swim_time||'-'}</span></td>
-      <td><span class="${r.bbq?'bbq-o':'bbq-x'}" onclick="toggleBBQ(event,'${r.id}')">${r.bbq?'O':'X'}</span></td>
-      <td>${r.customer_phone||'-'}</td>
-      <td class="edit-cell" onclick="editCell(event,'${r.id}','total_paid')">${r.total_paid?fmt(r.total_paid):'-'}</td>
-      <td>${statusBadge}</td>
-      <td class="edit-cell" onclick="editCell(event,'${r.id}','memo')">${memo}</td>
-      <td>${btns}</td>`
-    tbody.appendChild(tr)
-  })
-}
-
-async function doRefund(id){
-  if(!confirm('환불 처리하시겠습니까?'))return
-  try{
-    const{error}=await sb.from('reservations').update({status:'취소',is_cancelled:true,updated_at:new Date().toISOString()}).eq('id',id)
-    if(error)throw error
-    await reloadReservations()
-  }catch(e){console.error('[doRefund]',e);showError('저장에 실패했습니다: '+e.message)}
-}
-
-// ── 전체목록 ──
-function buildAll(){
-  const tbody=document.getElementById('allTbody');tbody.innerHTML=''
-  let rows
-  if(allTab==='취소')rows=allData.filter(r=>r.is_cancelled||r.status==='취소')
-  else if(allTab==='all')rows=[...allData]
-  else rows=allData.filter(r=>r.status===allTab&&!r.is_cancelled)
-  if(roomFilter)rows=rows.filter(r=>r.room_name===roomFilter)
-  rows.sort((a,b)=>{const va=new Date(a[sortField]||0),vb=new Date(b[sortField]||0);return sortDir*(vb-va)})
-  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="15">해당 예약이 없습니다</td></tr>';return}
-  rows.forEach(r=>tbody.appendChild(makeRow(r)))
-}
-
-function makeRow(r){
-  const tr=document.createElement('tr');tr.ondblclick=()=>openDetail(r.id)
-  const swimVal=`<span class="swim-link" onclick="openSwim(event,'${r.id}')">${r.swim_time||'-'}</span>`
-  const bbqVal=`<span class="${r.bbq?'bbq-o':'bbq-x'}" onclick="toggleBBQ(event,'${r.id}')">${r.bbq?'O':'X'}</span>`
-  const reviewVal=r.review?`<span class="review-o" onclick="toggleReview(event,'${r.id}')">O</span>`:`<span class="review-x" onclick="toggleReview(event,'${r.id}')">X</span>`
-  const isBlock=r.booking_type==='block'
-  const statusBadge=isBlock?'<span class="badge badge-block">예약막기</span>'
-    :r.is_cancelled||r.status==='취소'?'<span class="badge badge-cancel">취소</span>'
-    :r.status==='예약완료'?'<span class="badge badge-ok">완료</span>'
-    :r.status==='대기'?'<span class="badge badge-wait">대기</span>'
-    :r.status==='취소요청'?'<span class="badge badge-cancel-req">취소요청</span>'
-    :`<span class="badge">${r.status||'-'}</span>`
-  tr.innerHTML=`
-    <td><input type="checkbox" data-id="${r.id}" style="width:11px"></td>
-    <td>${fmtDate(r.booking_date)}</td><td>${fmtDate(r.visit_date)}</td><td>${r.room_name||'-'}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','customer_name')">${r.customer_name||'-'}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','people_count')">${r.people_count?r.people_count+'인':'-'}</td>
-    <td>${swimVal}</td><td>${bbqVal}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','customer_phone')">${r.customer_phone||'-'}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','arrival_time')">${fmtArrival(r.arrival_time)}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','total_paid')">${r.total_paid?fmt(r.total_paid):'-'}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','memo')">${r.memo||'-'}</td>
-    <td>${reviewVal}</td>
-    <td class="edit-cell" onclick="editCell(event,'${r.id}','admin_memo')">${r.admin_memo||'-'}</td>
-    <td>${statusBadge}</td>`
-  return tr
-}
-
-async function updateStatus(id,status){
-  const is_cancelled=status==='취소'
-  try{
-    const{error}=await sb.from('reservations').update({status,is_cancelled,updated_at:new Date().toISOString()}).eq('id',id)
-    if(error)throw error
-    await reloadReservations()
-  }catch(e){console.error('[updateStatus]',e);showError('저장에 실패했습니다: '+e.message)}
-}
-
-async function saveField(id,field,value){
-  const update={updated_at:new Date().toISOString()};update[field]=value
-  try{
-    const{error}=await sb.from('reservations').update(update).eq('id',id)
-    if(error)throw error
-    await reloadReservations()
-  }catch(e){console.error('[saveField]',field,e);showError('저장에 실패했습니다: '+e.message)}
-}
-
-function editCell(e,id,field){
-  e.stopPropagation();const td=e.currentTarget
-  const row=allData.find(r=>r.id===id);if(!row)return
-  if(field==='arrival_time'){
-    const inp=document.createElement('input');inp.className='inline-edit';inp.style.width='60px'
-    inp.placeholder='1200';inp.value=row.arrival_time||''
-    td.innerHTML='';td.appendChild(inp);inp.focus();inp.select()
-    const save=()=>{const raw=inp.value.trim();const f=raw?fmtArrival(raw):null;row.arrival_time=f;saveField(id,'arrival_time',f)}
-    inp.onblur=save;inp.onkeydown=ev=>{if(ev.key==='Enter')inp.blur()};return
+  // 가격 계산
+  const p=pricingData.find(x=>x.room_name===selectedHouse)
+  const wknd=isWeekend(selectedYear,selectedMonth-1,selectedDay)
+  const isHol=HOLIDAYS.includes(selectedDate)
+  const disc=discountData.find(d=>d.room_name===selectedHouse&&selectedDate>=d.start_date&&selectedDate<=d.end_date)
+  let base=0
+  if(p){
+    if(disc){
+      if(isHol&&disc.holiday_price)base=disc.holiday_price
+      else if(wknd&&disc.weekend_price)base=disc.weekend_price
+      else if(!wknd&&disc.weekday_price)base=disc.weekday_price
+      else base=wknd?p.weekend_price:p.weekday_price
+    }else{base=wknd?p.weekend_price:p.weekday_price}
+    const extra=Math.max(0,people-(p.base_people||2))
+    const unit=p.season_discount>0?p.season_discount:p.extra_per_person
+    const optTotal=selOpts.reduce((s,oid)=>{const o=optionsData.find(x=>x.id===oid);return s+(o?(o.discount_price||o.price):0)},0)
+    base=base+(extra*unit)+optTotal
   }
-  const inp=document.createElement('input');inp.className='inline-edit'
-  if(field==='people_count'||field==='total_paid')inp.type='number'
-  inp.value=(field==='total_paid'?row.total_paid:field==='people_count'?row.people_count:row[field])||''
-  td.innerHTML='';td.appendChild(inp);inp.focus();inp.select()
-  inp.onblur=()=>{
-    let val
-    if(field==='total_paid')val=parseInt(inp.value.replace(/,/g,''))||0
-    else if(field==='people_count')val=parseInt(inp.value)||1
-    else val=inp.value
-    row[field]=val;saveField(id,field,val)
-  }
-  inp.onkeydown=ev=>{if(ev.key==='Enter')inp.blur()}
-}
 
-function toggleBBQ(e,id){e.stopPropagation();const row=allData.find(r=>r.id===id);if(!row)return;row.bbq=!row.bbq;saveField(id,'bbq',row.bbq)}
-function toggleReview(e,id){e.stopPropagation();const row=allData.find(r=>r.id===id);if(!row)return;const v=row.review?null:'O';row.review=v;saveField(id,'review',v)}
-
-function openSwim(e,id){
-  e.stopPropagation();swimTargetId=id;const row=allData.find(r=>r.id===id)
-  const opts=document.getElementById('swimOptions');opts.innerHTML=''
-  SWIM_TIMES.forEach(t=>{
-    const btn=document.createElement('button');btn.className='btn-sm';btn.style.cssText='padding:4px 10px;font-size:11px;text-align:left'
-    if(row&&row.swim_time===t)btn.style.background='#e6f1fb';btn.textContent=t
-    btn.onclick=()=>{const r=allData.find(x=>x.id===swimTargetId);if(r){r.swim_time=t;saveField(swimTargetId,'swim_time',t)};closeAll()}
-    opts.appendChild(btn)
-  })
-  const none=document.createElement('button');none.className='btn-sm';none.style.cssText='padding:4px 10px;font-size:11px';none.textContent='없음'
-  none.onclick=()=>{const r=allData.find(x=>x.id===swimTargetId);if(r){r.swim_time=null;saveField(swimTargetId,'swim_time',null)};closeAll()}
-  opts.appendChild(none)
-  document.getElementById('swimPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
-}
-
-function openDetail(id){
-  const row=allData.find(r=>r.id===id);if(!row)return
-  currentDetailId=id
-  document.getElementById('popupName').textContent=row.customer_name||'고객'
-  document.getElementById('popupBody').innerHTML=`
-    <div class="detail-grid">
-      <span>방문일</span><span>${fmtDate(row.visit_date)}</span>
-      <span>신청일</span><span>${fmtDate(row.booking_date)}</span>
-      <span>객실</span><span>${row.room_name||'-'}</span>
-      <span>인원</span><span>${row.people_count||'-'}인</span>
-      <span>연락처</span><span>${row.customer_phone||'-'}</span>
-      <span>결제금액</span><span>${row.total_paid?fmt(row.total_paid)+'원':'-'}</span>
-      <span>바베큐</span><span>${row.bbq?'O':'X'}</span>
-      <span>상태</span><span>${row.status||'-'}</span>
-      <span>수영시간</span><span>${row.swim_time||'-'}</span>
-      <span>도착예정</span><span>${fmtArrival(row.arrival_time)}</span>
-      <span>메모</span><span>${row.memo||'-'}</span>
-    </div>`
-  const same=allData.filter(r=>r.customer_phone===row.customer_phone)
-  const vc=same.filter(r=>r.status==='예약완료').length
-  const cc=same.filter(r=>r.status==='취소'||r.is_cancelled).length
-  document.getElementById('visitHistory').innerHTML=`<span>방문횟수</span><span>${vc}회</span><span>취소횟수</span><span>${cc}회</span>`
-  document.getElementById('companionName').value=row.companion_name||''
-  document.getElementById('companionPhone').value=row.companion_phone||''
-  document.getElementById('reviewText').value=row.review||''
-  document.getElementById('detailPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
-}
-
-async function saveDetail(){
-  if(!currentDetailId)return
-  const companion_name=document.getElementById('companionName').value.trim()
-  const companion_phone=document.getElementById('companionPhone').value.trim()
-  const review=document.getElementById('reviewText').value.trim()
+  const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='신청 중...'
   try{
-    const{error}=await sb.from('reservations').update({companion_name,companion_phone,review:review||null,updated_at:new Date().toISOString()}).eq('id',currentDetailId)
+    const fmtISO2=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+    const{error}=await sb.from('reservations').insert([{
+      visit_date:selectedDate,booking_date:fmtISO2(new Date()),
+      room_name:selectedHouse,customer_name:name,customer_phone:phone.replace(/\s/g,''),
+      people_count:people,bbq:hasBBQ,total_paid:base||null,
+      status:'대기',booking_type:'reservation',is_cancelled:false,
+      vat_number:receipt||null,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }])
     if(error)throw error
-    await reloadReservations();closeAll()
-  }catch(e){console.error('[saveDetail]',e);showError('저장에 실패했습니다: '+e.message)}
+    document.getElementById('bookFormWrap').style.display='none'
+    document.getElementById('successMsg').style.display='block'
+    document.getElementById('successMsg').scrollIntoView({behavior:'smooth'})
+  }catch(e){
+    console.error('[submitBooking]',e)
+    errBar.textContent='예약 신청에 실패했습니다. 다시 시도해주세요.';errBar.style.display='block'
+    btn.disabled=false;btn.textContent='예약 신청'
+  }
 }
 
-function closeAll(){
-  ;['overlay','detailPopup','swimPopup','bookPopup','settingPopup','discountPopup','optionPopup','scheduleViewPopup','scheduleAddPopup','customerMgmtPopup'].forEach(id=>document.getElementById(id).classList.remove('show'))
-  document.getElementById('roomDropdown').classList.remove('show')
-  ;['btnSetting','btnDiscount','btnOption','btnCustomer'].forEach(id=>document.getElementById(id).classList.remove('active-tool'))
-  currentDetailId=null;currentSchId=null
+function changeMonth(dir){
+  curMonth+=dir
+  if(curMonth>11){curMonth=0;curYear++}else if(curMonth<0){curMonth=11;curYear--}
+  buildCalendar()
 }
 
-function setTab(t){
-  allTab=t
-  const map={'예약완료':'active-complete','취소':'active-cancel','all':'active-all'}
-  const labels={'예약완료':'완료','취소':'취소','all':'전체'}
-  document.querySelectorAll('#tabRow .tab').forEach(b=>{b.className='tab';if(labels[t]===b.textContent)b.classList.add(map[t])})
-  buildAll()
-}
-
-function openRoomDropdown(e){
-  e.stopPropagation();const dd=document.getElementById('roomDropdown')
-  const rect=document.getElementById('thRoom').getBoundingClientRect()
-  dd.style.top=(rect.bottom+4)+'px';dd.style.left=rect.left+'px';dd.classList.toggle('show')
-}
-
-function setRoomFilter(r){
-  roomFilter=r
-  ;['all',...ALL_ROOMS].forEach(v=>{const el=document.getElementById('rf-'+(v==='all'?'all':v));if(el)el.className=((!r&&v==='all')||r===v)?'active':''})
-  document.getElementById('thRoom').textContent='객실'+(r?`(${r})`:'')+'▾'
-  document.getElementById('roomDropdown').classList.remove('show');buildAll()
-}
-
-function sortToggle(field){
-  if(sortField===field)sortDir*=-1;else{sortField=field;sortDir=-1}
-  document.getElementById('thDate').textContent='방문일'+(sortField==='visit_date'?(sortDir===-1?'↓':'↑'):'')
-  document.getElementById('thCreated').textContent='신청일'+(sortField==='booking_date'?(sortDir===-1?'↓':'↑'):'')
-  buildAll()
-}
-
-function exportCSV(){
-  const rows=allData.filter(r=>allTab==='all'?true:allTab==='취소'?(r.is_cancelled||r.status==='취소'):(r.status===allTab&&!r.is_cancelled))
-  const headers=['신청일','방문일','객실','이름','인원','연락처','결제금액','BBQ','수영','도착','상태','메모','후기','관리자메모']
-  const lines=[headers.join(','),...rows.map(r=>[fmtDate(r.booking_date),fmtDate(r.visit_date),r.room_name,r.customer_name,r.people_count,r.customer_phone,r.total_paid,r.bbq?'O':'X',r.swim_time,fmtArrival(r.arrival_time),r.status,r.memo,r.review?'O':'X',r.admin_memo].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(','))]
-  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'})
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='reservations.csv';a.click()
-}
-
-// ── 설정 팝업 ──
-function openSettingPopup(){
-  buildPriceTable();document.getElementById('settingSaved').style.display='none'
-  document.getElementById('settingPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
-  document.getElementById('btnSetting').classList.add('active-tool')
-}
-function buildPriceTable(){
-  const tbody=document.getElementById('priceTbody');tbody.innerHTML=''
-  ;['허클베리','톰소여','상수리','은행','비버튼'].forEach(room=>{
-    const p=getPricing(room)||{}
-    const tr=document.createElement('tr')
-    tr.innerHTML=`<td style="font-weight:500">${room}</td>
-      <td><input class="price-input" style="width:44px" type="number" data-room="${room}" data-field="base_people" value="${p.base_people||2}"></td>
-      <td><input class="price-input" style="width:44px" type="number" data-room="${room}" data-field="max_people" value="${p.max_people||4}"></td>
-      <td><input class="price-input" type="number" data-room="${room}" data-field="weekday_price" value="${p.weekday_price||0}"></td>
-      <td><input class="price-input" type="number" data-room="${room}" data-field="weekend_price" value="${p.weekend_price||0}"></td>
-      <td><input class="price-input" type="number" data-room="${room}" data-field="extra_per_person" value="${p.extra_per_person||0}"></td>
-      <td><input class="price-input" type="number" data-room="${room}" data-field="season_discount" value="${p.season_discount||0}"></td>`
-    tbody.appendChild(tr)
-  })
-}
-async function savePricing(){
-  const inputs=document.querySelectorAll('#priceTbody input');const updates={}
-  inputs.forEach(inp=>{const room=inp.dataset.room;const field=inp.dataset.field;if(!updates[room])updates[room]={room_name:room};updates[room][field]=parseInt(inp.value)||0})
-  try{
-    for(const room of Object.keys(updates)){
-      const existing=getPricing(room)
-      if(existing)await sb.from('pricing').update({...updates[room],updated_at:new Date().toISOString()}).eq('room_name',room)
-      else await sb.from('pricing').insert([{...updates[room],updated_at:new Date().toISOString()}])
-    }
-    const{data}=await sb.from('pricing').select('*');pricingData=data||[]
-    document.getElementById('settingSaved').style.display='inline'
-    setTimeout(()=>{document.getElementById('settingSaved').style.display='none'},2000)
-  }catch(e){showError('가격 저장 실패: '+e.message)}
-}
-
-// ── 할인 팝업 ──
-function openDiscountPopup(){
-  buildDiscountList()
-  document.getElementById('discountPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
-  document.getElementById('btnDiscount').classList.add('active-tool')
-}
-function buildDiscountList(){
-  const el=document.getElementById('discountList')
-  if(!discountData.length){el.innerHTML='<p style="font-size:11px;color:#888;padding:8px 0">설정된 할인이 없습니다.</p>';return}
-  el.innerHTML=discountData.map(d=>`<div class="disc-item"><div class="di-info"><strong>${d.room_name}</strong> · ${d.start_date} ~ ${d.end_date}${d.weekday_price?` 주중 ${fmt(d.weekday_price)}원`:''}${d.weekend_price?` 주말 ${fmt(d.weekend_price)}원`:''}${d.holiday_price?` 공휴일 ${fmt(d.holiday_price)}원`:''}${d.note?` (${d.note})`:''}</div><button class="di-del" onclick="deleteDiscount('${d.id}')">삭제</button></div>`).join('')
-}
-async function addDiscount(){
-  const start=document.getElementById('discStart').value;const end=document.getElementById('discEnd').value
-  if(!start||!end){alert('기간을 입력해주세요.');return}
-  const rooms=[...document.querySelectorAll('#discRooms input:checked')].map(c=>c.value)
-  if(!rooms.length){alert('객실을 선택해주세요.');return}
-  const weekday=parseInt(document.getElementById('discWeekday').value)||null
-  const weekend=parseInt(document.getElementById('discWeekend').value)||null
-  const holiday=parseInt(document.getElementById('discHoliday').value)||null
-  const note=document.getElementById('discNote').value.trim()
-  try{
-    for(const room of rooms){
-      const{data,error}=await sb.from('discounts').insert([{room_name:room,start_date:start,end_date:end,weekday_price:weekday,weekend_price:weekend,holiday_price:holiday,note:note||null,updated_at:new Date().toISOString()}]).select()
-      if(error)throw error;if(data&&data[0])discountData.push(data[0])
-    }
-    buildDiscountList()
-    ;['discStart','discEnd','discWeekday','discWeekend','discHoliday','discNote'].forEach(id=>document.getElementById(id).value='')
-    document.querySelectorAll('#discRooms input').forEach(c=>c.checked=false)
-  }catch(e){showError('할인 저장 실패: '+e.message)}
-}
-async function deleteDiscount(id){
-  if(!confirm('삭제하시겠습니까?'))return
-  const{error}=await sb.from('discounts').delete().eq('id',id)
-  if(error){showError('삭제 실패: '+error.message);return}
-  discountData=discountData.filter(d=>d.id!==id);buildDiscountList()
-}
-
-// ── 옵션 팝업 ──
-function openOptionPopup(){
-  buildOptionList()
-  document.getElementById('optionPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
-  document.getElementById('btnOption').classList.add('active-tool')
-}
-function buildOptionList(){
-  const el=document.getElementById('optionList')
-  if(!optionsData.length){el.innerHTML='<p style="font-size:11px;color:#888">등록된 옵션이 없습니다.</p>';return}
-  el.innerHTML=optionsData.map(o=>`<div class="opt-item"><span style="font-weight:500;width:70px">${o.name}</span><span style="color:#555">정가 ${fmt(o.price)}원 / 할인가 ${fmt(o.discount_price||0)}원</span><span style="color:#888;font-size:10px">${(o.apply_rooms||[]).join(', ')}</span><button class="opt-toggle ${o.is_active?'on':'off'}" onclick="toggleOption('${o.id}',${!o.is_active})">${o.is_active?'활성':'비활성'}</button><button class="di-del" onclick="deleteOption('${o.id}')">삭제</button></div>`).join('')
-}
-async function toggleOption(id,active){
-  const{error}=await sb.from('options').update({is_active:active,updated_at:new Date().toISOString()}).eq('id',id)
-  if(error){showError('저장 실패');return}
-  const o=optionsData.find(x=>x.id===id);if(o)o.is_active=active;buildOptionList()
-}
-async function deleteOption(id){
-  if(!confirm('옵션을 삭제하시겠습니까?'))return
-  const{error}=await sb.from('options').delete().eq('id',id)
-  if(error){showError('삭제 실패');return}
-  optionsData=optionsData.filter(o=>o.id!==id);buildOptionList()
-}
-async function addOption(){
-  const name=document.getElementById('newOptName').value.trim()
-  const price=parseInt(document.getElementById('newOptPrice').value)||0
-  const disc=parseInt(document.getElementById('newOptDiscount').value)||0
-  const note=document.getElementById('newOptNote').value.trim()
-  if(!name){alert('옵션명을 입력해주세요.');return}
-  const rooms=[...document.querySelectorAll('#newOptRooms input:checked')].map(c=>c.value)
-  const{data,error}=await sb.from('options').insert([{name,price,discount_price:disc,is_active:true,apply_rooms:rooms,note:note||null,updated_at:new Date().toISOString()}]).select()
-  if(error){showError('저장 실패: '+error.message);return}
-  if(data&&data[0])optionsData.push(data[0])
-  buildOptionList()
-  ;['newOptName','newOptPrice','newOptDiscount','newOptNote'].forEach(id=>document.getElementById(id).value='')
-  document.querySelectorAll('#newOptRooms input').forEach(c=>c.checked=false)
-}
-
-// ── 고객화면 관리 ──
-async function openCustomerMgmt(){
-  // DB에서 최신값 로드
-  const{data}=await sb.from('site_settings').select('*')
-  if(data)data.forEach(s=>{siteSettings[s.key]=s.value})
-  document.getElementById('mgmtNotice').value=siteSettings['customer_notice']||''
-  document.getElementById('mgmtTerms').value=siteSettings['customer_terms']||''
-  document.getElementById('customerMgmtSaved').style.display='none'
-  document.getElementById('customerMgmtPopup').classList.add('show')
-  document.getElementById('overlay').classList.add('show')
-  document.getElementById('btnCustomer').classList.add('active-tool')
-}
-
-async function saveCustomerMgmt(){
-  const notice=document.getElementById('mgmtNotice').value
-  const terms=document.getElementById('mgmtTerms').value
-  try{
-    await sb.from('site_settings').upsert([{key:'customer_notice',value:notice,updated_at:new Date().toISOString()}])
-    await sb.from('site_settings').upsert([{key:'customer_terms',value:terms,updated_at:new Date().toISOString()}])
-    siteSettings['customer_notice']=notice
-    siteSettings['customer_terms']=terms
-    document.getElementById('customerMgmtSaved').style.display='inline'
-    setTimeout(()=>{document.getElementById('customerMgmtSaved').style.display='none'},2000)
-  }catch(e){console.error('[saveCustomerMgmt]',e);showError('저장 실패: '+e.message)}
-}
-
-function changeMonth(dir){curMonth+=dir;if(curMonth>11){curMonth=0;curYear++}else if(curMonth<0){curMonth=11;curYear--};buildCalendar()}
-function changeDay(dir){selectedDate.setDate(selectedDate.getDate()+dir);curYear=selectedDate.getFullYear();curMonth=selectedDate.getMonth();buildCalendar();buildDateSection()}
-
-document.addEventListener('click',e=>{
-  if(!document.getElementById('roomDropdown').contains(e.target)&&!document.getElementById('thRoom').contains(e.target))
-    document.getElementById('roomDropdown').classList.remove('show')
-})
-
-loadAll()
+init()
 </script>
 </body>
 </html>
