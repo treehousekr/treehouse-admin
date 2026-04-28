@@ -544,11 +544,16 @@ async function cancelSelected(section){
   const ids=[...tbody.querySelectorAll('input[type=checkbox]:checked')].map(c=>c.dataset.id).filter(Boolean)
   if(!ids.length){alert('취소할 예약을 선택해주세요.');return}
   if(!confirm(`${ids.length}건을 취소요청 처리하시겠습니까?`))return
-  for(const id of ids){
-    const{error}=await sb.from('reservations').update({status:'취소요청',updated_at:new Date().toISOString()}).eq('id',id)
-    if(!error){const row=allData.find(r=>r.id===id);if(row)row.status='취소요청'}
+  try{
+    for(const id of ids){
+      const{error}=await sb.from('reservations').update({status:'취소요청',updated_at:new Date().toISOString()}).eq('id',id)
+      if(error)throw error
+    }
+    await reloadReservations()
+  }catch(e){
+    console.error('[cancelSelected] 실패:',e)
+    showError('저장에 실패했습니다: '+e.message)
   }
-  buildCalendar();buildWait();buildAll();buildDateSection()
 }
 
 // ── 캘린더 ──
@@ -717,11 +722,15 @@ async function saveBooking(){
       vat_number:receipt||null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()
     }]).select()
     if(error)throw error
-    if(data&&data[0])allData.push(data[0])
+    console.log('[saveBooking] 성공:',data)
     btn.textContent='저장됨!'
-    buildCalendar();buildDateSection();buildWait();buildAll()
+    await reloadReservations()
     setTimeout(()=>closeAll(),1200)
-  }catch(e){showError('예약 저장 실패: '+e.message);btn.disabled=false;btn.textContent='저장'}
+  }catch(e){
+    console.error('[saveBooking] 실패:',e)
+    showError('저장에 실패했습니다: '+e.message)
+    btn.disabled=false;btn.textContent='저장'
+  }
 }
 
 // ── 날짜별 ──
@@ -770,10 +779,14 @@ function buildWait(){
 
 async function doRefund(id){
   if(!confirm('환불 처리하시겠습니까?'))return
-  const{error}=await sb.from('reservations').update({status:'취소',is_cancelled:true,updated_at:new Date().toISOString()}).eq('id',id)
-  if(error){showError('환불 처리 실패: '+error.message);return}
-  const row=allData.find(r=>r.id===id);if(row){row.status='취소';row.is_cancelled=true}
-  buildCalendar();buildWait();buildAll();buildDateSection()
+  try{
+    const{error}=await sb.from('reservations').update({status:'취소',is_cancelled:true,updated_at:new Date().toISOString()}).eq('id',id)
+    if(error)throw error
+    await reloadReservations()
+  }catch(e){
+    console.error('[doRefund] 실패:',e)
+    showError('저장에 실패했습니다: '+e.message)
+  }
 }
 
 // ── 전체목록 ──
@@ -820,17 +833,38 @@ function makeRow(r){
 
 async function updateStatus(id,status){
   const is_cancelled=status==='취소'
-  const{error}=await sb.from('reservations').update({status,is_cancelled,updated_at:new Date().toISOString()}).eq('id',id)
-  if(error){showError('저장 실패: '+error.message);return}
-  const row=allData.find(r=>r.id===id);if(row){row.status=status;row.is_cancelled=is_cancelled}
-  buildCalendar();buildWait();buildAll();buildDateSection()
+  try{
+    const{error}=await sb.from('reservations').update({status,is_cancelled,updated_at:new Date().toISOString()}).eq('id',id)
+    if(error)throw error
+    console.log('[updateStatus] 성공:',id,status)
+    await reloadReservations()
+  }catch(e){
+    console.error('[updateStatus] 실패:',e)
+    showError('저장에 실패했습니다: '+e.message)
+  }
 }
 
 async function saveField(id,field,value){
   const update={updated_at:new Date().toISOString()};update[field]=value
-  const{error}=await sb.from('reservations').update(update).eq('id',id)
-  if(error)showError('저장 실패: '+error.message)
-  else{const row=allData.find(r=>r.id===id);if(row)row[field]=value}
+  try{
+    const{error}=await sb.from('reservations').update(update).eq('id',id)
+    if(error)throw error
+    console.log('[saveField] 성공:',field,value)
+    await reloadReservations()
+  }catch(e){
+    console.error('[saveField] 실패:',field,e)
+    showError('저장에 실패했습니다: '+e.message)
+  }
+}
+
+// Supabase에서 예약 데이터 재fetch
+async function reloadReservations(){
+  const{data,error}=await sb.from('reservations')
+    .select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone')
+    .order('visit_date',{ascending:true})
+  if(error){console.error('[reloadReservations] 실패:',error);showError('데이터 갱신 실패: '+error.message);return}
+  allData=data||[]
+  buildCalendar();buildDateSection();buildWait();buildAll()
 }
 
 function editCell(e,id,field){
@@ -921,11 +955,16 @@ async function saveDetail(){
   const companion_name=document.getElementById('companionName').value.trim()
   const companion_phone=document.getElementById('companionPhone').value.trim()
   const review=document.getElementById('reviewText').value.trim()
-  const{error}=await sb.from('reservations').update({companion_name,companion_phone,review:review||null,updated_at:new Date().toISOString()}).eq('id',currentDetailId)
-  if(error){showError('저장 실패: '+error.message);return}
-  const row=allData.find(r=>r.id===currentDetailId)
-  if(row){row.companion_name=companion_name;row.companion_phone=companion_phone;row.review=review||null}
-  buildAll();buildDateSection();closeAll()
+  try{
+    const{error}=await sb.from('reservations').update({companion_name,companion_phone,review:review||null,updated_at:new Date().toISOString()}).eq('id',currentDetailId)
+    if(error)throw error
+    console.log('[saveDetail] 성공:',currentDetailId)
+    await reloadReservations()
+    closeAll()
+  }catch(e){
+    console.error('[saveDetail] 실패:',e)
+    showError('저장에 실패했습니다: '+e.message)
+  }
 }
 
 function closeAll(){
