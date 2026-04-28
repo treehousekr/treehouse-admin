@@ -54,8 +54,8 @@
     .cal-item.other-available{color:#ccc;cursor:pointer;display:block}
     .cal-item.other-confirmed{color:#e8b0b0;text-decoration:line-through;cursor:default}
     .cal-item.other-pending{color:#ddd;text-decoration:underline dotted;cursor:default}
-    .cal-item.other-blocked{color:#f5c97a;text-decoration:line-through;cursor:default}
-    .cal-item.other-temp-blocked{color:#a8d5b5;text-decoration:line-through;cursor:default}
+    .cal-item.other-blocked{color:#f5c97a;text-decoration:line-through;cursor:pointer}
+    .cal-item.other-temp-blocked{color:#a8d5b5;text-decoration:line-through;cursor:pointer}
     .cal-schedule{font-size:10px;color:#7f8c8d;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;font-style:italic}
     .cal-schedule:hover{color:#555;text-decoration:underline}
 
@@ -366,21 +366,20 @@
   <button class="popup-close" onclick="closeAll()">닫기</button>
 </div>
 
-<!-- 예약막기 취소 팝업 -->
-<div class="popup" id="unblockPopup" style="min-width:240px;max-width:320px">
-  <h3>예약막기 취소</h3>
-  <div id="unblockInfo" style="font-size:12px;color:#555;margin-bottom:14px"></div>
-  <div style="display:flex;gap:8px">
-    <button class="btn-sm btn-cancel-action" onclick="confirmUnblock()">예약막기 해제</button>
-    <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
-  </div>
-</div>
-
 <!-- 스케줄 상세 팝업 -->
 <div class="popup" id="scheduleViewPopup" style="min-width:220px">
   <h3 id="schViewTitle"></h3>
   <div id="schViewBody" style="font-size:12px;color:#555;margin-bottom:8px"></div>
   <button class="di-del" id="schViewDel" onclick="deleteScheduleFromView()">삭제</button>
+  <button class="popup-close" onclick="closeAll()">닫기</button>
+</div>
+
+<!-- 예약막기 / 임시막기 상세 팝업 -->
+<div class="popup" id="unblockPopup" style="min-width:240px;max-width:320px">
+  <h3 id="unblockTitle">상태 상세</h3>
+  <div id="unblockInfo" style="font-size:12px;color:#555;margin-bottom:8px"></div>
+  <div id="unblockBody" style="font-size:11px;color:#888;margin-bottom:14px"></div>
+  <button class="di-del" id="unblockActionBtn" onclick="confirmUnblock()">해제</button>
   <button class="popup-close" onclick="closeAll()">닫기</button>
 </div>
 
@@ -725,6 +724,9 @@ function buildCalCell(d,y,m,isoDay,isOther){
     if(rs){
       item.className='cal-item '+getCalItemClass(rs.status,rs.type,isOther)
       item.textContent=h
+      if(rs.type==='block'||rs.type==='temp_block'){
+        item.onclick=(e)=>{e.stopPropagation();openUnblockConfirm(h,isoDay,rs.type)}
+      }
     }else{
       item.className='cal-item '+(isOther?'other-available':'available')
       item.textContent=h
@@ -1252,14 +1254,18 @@ async function addOption(){
   document.querySelectorAll('#newOptRooms input').forEach(c=>c.checked=false)
 }
 
-// ── 예약막기 취소 ──
-let unblockTarget={house:'',isoDate:'',id:''}
+// ── 예약막기 / 임시막기 해제 ──
+let unblockTarget={house:'',isoDate:'',id:'',bookingType:''}
 
-function openUnblockConfirm(house,isoDate){
-  const row=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&r.booking_type==='block')
+function openUnblockConfirm(house,isoDate,bookingType='block'){
+  const row=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&r.booking_type===bookingType)
   if(!row)return
-  unblockTarget={house,isoDate,id:row.id}
-  document.getElementById('unblockInfo').textContent=`${house}  ·  ${isoDate}  예약막기를 해제하시겠습니까?`
+  const label=bookingType==='temp_block'?'임시막기':'예약막기'
+  unblockTarget={house,isoDate,id:row.id,bookingType}
+  document.getElementById('unblockTitle').textContent=house
+  document.getElementById('unblockInfo').textContent=`${isoDate}  ·  ${label}`
+  document.getElementById('unblockBody').textContent=row.memo||'등록된 메모가 없습니다.'
+  document.getElementById('unblockActionBtn').textContent=`${label} 해제`
   document.getElementById('unblockPopup').classList.add('show')
   document.getElementById('overlay').classList.add('show')
 }
