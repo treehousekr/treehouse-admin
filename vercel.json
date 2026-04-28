@@ -1,10 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "*.html", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/customer", "dest": "/customer.html" },
-    { "src": "/(.*)", "dest": "/$1" }
-  ]
+  "outputDirectory": ".",
+  "buildCommand": "echo done"
 }
