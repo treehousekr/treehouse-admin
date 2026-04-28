@@ -1,4 +1,5 @@
 {
+  "buildCommand": "echo done",
   "outputDirectory": ".",
-  "buildCommand": "echo done"
+  "framework": null
 }
