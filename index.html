@@ -20,11 +20,11 @@
 
     /* 캘린더 */
     .cal-top{display:flex;align-items:center;justify-content:center;padding:10px 14px 6px;position:relative}
-    .cal-tools{position:absolute;left:14px;display:flex;gap:8px}
-    .cal-tools button{background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:2px 5px;border-radius:3px}
+    .cal-tools{position:absolute;left:14px;display:flex;gap:6px;align-items:center}
+    .cal-tools button{background:none;border:none;cursor:pointer;font-size:11px;color:#999;padding:2px 5px;border-radius:3px;font-family:inherit}
     .cal-tools button:hover{color:#333;background:#f0f0ee}
     .cal-tools button.active-tool{color:#185fa5;font-weight:500;background:#e6f1fb}
-    .cal-right{position:absolute;right:14px;display:flex;gap:10px;align-items:center}
+    .cal-right{position:absolute;right:14px;display:flex;gap:8px;align-items:center}
     .cal-right a,.cal-right button{background:none;border:none;cursor:pointer;font-size:11px;color:#bbb;text-decoration:none;font-family:inherit}
     .cal-right a:hover,.cal-right button:hover{color:#888}
     .cal-nav{display:flex;align-items:center;gap:12px}
@@ -49,7 +49,7 @@
     .cal-item.available:hover{color:#378add}
     .cal-item.confirmed{color:#c0392b;text-decoration:line-through;cursor:default} /* 예약완료 - 빨간줄 */
     .cal-item.pending{color:#e67e22;text-decoration:underline dotted;cursor:default} /* 예약대기 - 주황 점선 */
-    .cal-item.blocked{color:#2980b9;text-decoration:line-through;cursor:default} /* 예약막기 - 파란줄 */
+    .cal-item.blocked{color:#2980b9;text-decoration:line-through;cursor:pointer} /* 예약막기 - 파란줄 */
     .cal-item.other-available{color:#ccc;cursor:pointer;display:block}
     .cal-item.other-confirmed{color:#e8b0b0;text-decoration:line-through;cursor:default}
     .cal-item.other-pending{color:#f0c898;text-decoration:underline dotted;cursor:default}
@@ -213,14 +213,17 @@
         <button id="btnDiscount" onclick="openDiscountPopup()">할인</button>
         <button id="btnOption" onclick="openOptionPopup()">옵션</button>
         <button id="btnSetting" onclick="openSettingPopup()">설정</button>
-        <button id="btnCustomer" onclick="openCustomerMgmt()">고객화면관리</button>
       </div>
       <div class="cal-nav">
         <button onclick="changeMonth(-1)">&#8249;</button>
         <span class="cal-month" id="calMonthLabel"></span>
         <button onclick="changeMonth(1)">&#8250;</button>
-        <button onclick="openScheduleAddPopup()" style="font-size:11px;color:#bbb;background:none;border:none;cursor:pointer;margin-left:8px;font-family:inherit">일정추가</button>
-        <a href="customer.html" target="_blank" style="font-size:11px;color:#bbb;text-decoration:none;margin-left:6px">고객화면</a>
+      </div>
+      <div class="cal-right">
+        <button id="btnCustomer" onclick="openCustomerMgmt()">고객화면관리</button>
+        <a href="customer.html" target="_blank">고객화면</a>
+        <span style="color:#e0dfd8">|</span>
+        <button onclick="openScheduleAddPopup()">일정추가</button>
       </div>
     </div>
     <div class="cal-grid" id="calGrid"></div>
@@ -249,8 +252,8 @@
           <th style="width:32px">인원</th>
           <th style="width:36px">수영</th>
           <th style="width:22px">BBQ</th>
-          <th style="width:108px">연락처</th>
-          <th style="width:36px">도착</th>
+          <th style="width:104px">연락처</th>
+          <th style="width:34px">도착</th>
           <th style="width:68px">결제금액</th>
           <th style="width:90px">메모</th>
           <th style="width:22px">후기</th>
@@ -315,8 +318,8 @@
           <th style="width:32px">인원</th>
           <th style="width:36px">수영</th>
           <th style="width:22px">BBQ</th>
-          <th style="width:108px">연락처</th>
-          <th style="width:36px">도착</th>
+          <th style="width:104px">연락처</th>
+          <th style="width:34px">도착</th>
           <th style="width:68px">결제금액</th>
           <th style="width:90px">메모</th>
           <th style="width:22px">후기</th>
@@ -359,6 +362,16 @@
   <h3>수영 시간 변경</h3>
   <div id="swimOptions" style="display:flex;flex-direction:column;gap:5px;margin:8px 0"></div>
   <button class="popup-close" onclick="closeAll()">닫기</button>
+</div>
+
+<!-- 예약막기 취소 팝업 -->
+<div class="popup" id="unblockPopup" style="min-width:240px;max-width:320px">
+  <h3>예약막기 취소</h3>
+  <div id="unblockInfo" style="font-size:12px;color:#555;margin-bottom:14px"></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-sm btn-cancel-action" onclick="confirmUnblock()">예약막기 해제</button>
+    <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
+  </div>
 </div>
 
 <!-- 스케줄 상세 팝업 -->
@@ -550,7 +563,7 @@ let selectedDate=new Date(today)
 let bookingCtx={house:'',year:0,month:0,day:0,isWeekend:false,isoDate:''}
 
 // 전역 등록
-const G={changeMonth,changeDay,setTab,openRoomDropdown,setRoomFilter,sortToggle,exportCSV,openCustomerMgmt,saveCustomerMgmt,
+const G={changeMonth,changeDay,setTab,openRoomDropdown,setRoomFilter,sortToggle,exportCSV,openCustomerMgmt,saveCustomerMgmt,openUnblockConfirm,confirmUnblock,
   closeAll,openSettingPopup,openDiscountPopup,openOptionPopup,openDetail,openSwim,
   toggleBBQ,editCell,updateStatus,saveBooking,calcPrice,savePricing,cancelSelected,
   toggleAllCheck,saveDetail,toggleReview,doRefund,addDiscount,deleteDiscount,
@@ -1082,7 +1095,7 @@ async function saveDetail(){
 }
 
 function closeAll(){
-  ;['overlay','detailPopup','swimPopup','bookPopup','settingPopup','discountPopup','optionPopup','scheduleViewPopup','scheduleAddPopup','customerMgmtPopup'].forEach(id=>document.getElementById(id).classList.remove('show'))
+  ;['overlay','detailPopup','swimPopup','bookPopup','settingPopup','discountPopup','optionPopup','scheduleViewPopup','scheduleAddPopup','customerMgmtPopup','unblockPopup'].forEach(id=>document.getElementById(id).classList.remove('show'))
   document.getElementById('roomDropdown').classList.remove('show')
   ;['btnSetting','btnDiscount','btnOption','btnCustomer'].forEach(id=>document.getElementById(id).classList.remove('active-tool'))
   currentDetailId=null;currentSchId=null
@@ -1232,6 +1245,28 @@ async function addOption(){
   buildOptionList()
   ;['newOptName','newOptPrice','newOptDiscount','newOptNote'].forEach(id=>document.getElementById(id).value='')
   document.querySelectorAll('#newOptRooms input').forEach(c=>c.checked=false)
+}
+
+// ── 예약막기 취소 ──
+let unblockTarget={house:'',isoDate:'',id:''}
+
+function openUnblockConfirm(house,isoDate){
+  const row=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&r.booking_type==='block')
+  if(!row)return
+  unblockTarget={house,isoDate,id:row.id}
+  document.getElementById('unblockInfo').textContent=`${house}  ·  ${isoDate}  예약막기를 해제하시겠습니까?`
+  document.getElementById('unblockPopup').classList.add('show')
+  document.getElementById('overlay').classList.add('show')
+}
+
+async function confirmUnblock(){
+  if(!unblockTarget.id)return
+  try{
+    const{error}=await sb.from('reservations').update({status:'취소',is_cancelled:true,updated_at:new Date().toISOString()}).eq('id',unblockTarget.id)
+    if(error)throw error
+    await reloadReservations()
+    closeAll()
+  }catch(e){console.error('[confirmUnblock]',e);showError('저장에 실패했습니다: '+e.message)}
 }
 
 // ── 고객화면 관리 ──
