@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>트리하우스 예약</title>
+  <style>
+    @font-face {
+      font-family: 'ChosunGu';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/ChosunGu.woff') format('woff');
+      font-weight: normal; font-style: normal;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'ChosunGu','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#faf9f7;min-height:100vh}
+
+    .page{max-width:480px;margin:0 auto;padding:20px 16px 60px}
+
+    /* 헤더 */
+    .site-header{text-align:center;padding:24px 0 16px}
+    .site-title{font-size:20px;font-weight:500;letter-spacing:0.05em;color:#2c2c2c}
+    .site-sub{font-size:12px;color:#aaa;margin-top:4px}
+
+    /* 캘린더 */
+    .cal-wrap{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.06);margin-bottom:20px}
+    .cal-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 16px 8px}
+    .cal-nav button{background:none;border:none;cursor:pointer;color:#888;font-size:18px;padding:2px 8px;font-family:inherit}
+    .cal-month{font-size:15px;font-weight:500;color:#2c2c2c}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+    .cal-dow{text-align:center;padding:6px 0;font-size:11px;color:#aaa}
+    .cal-dow.sun,.cal-dow.sat{color:#c8d8ee}
+    .cal-cell{padding:4px 3px;min-height:64px;background:#fff;border-top:0.5px solid #f0efea;position:relative}
+    .cal-cell.other-month{background:#fafaf8}
+    .cal-date-num{font-size:11px;font-weight:500;margin-bottom:3px;color:#555;text-align:center}
+    .cal-cell.col-sun .cal-date-num,.cal-cell.col-sat .cal-date-num{color:#b0c8e8}
+    .cal-cell.col-holiday .cal-date-num{color:#e8a0a0}
+    .cal-cell.other-month .cal-date-num{color:#ddd}
+    /* 고객 캘린더 객실 표시 */
+    .c-room{font-size:9px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;cursor:pointer;border-radius:3px;padding:1px 2px;margin-bottom:1px}
+    .c-room.free{color:#555;background:#f5f5f0}
+    .c-room.free:hover{background:#e8f4e8;color:#3b6d11}
+    .c-room.taken{color:#bbb;text-decoration:line-through;cursor:default;background:transparent}
+
+    /* 선택된 날짜 표시 */
+    .cal-cell.selected-day{background:#f0f8f0}
+
+    /* 안내사항 */
+    .notice-wrap{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.06);margin-bottom:20px;white-space:pre-line;font-size:13px;color:#555;line-height:1.8}
+    .notice-title{font-size:13px;font-weight:500;color:#888;margin-bottom:10px}
+
+    /* 예약 신청 폼 */
+    .book-form{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+    .book-form h2{font-size:15px;font-weight:500;margin-bottom:4px}
+    .book-form-sub{font-size:12px;color:#888;margin-bottom:16px}
+    .form-group{margin-bottom:14px}
+    .form-group label{display:block;font-size:12px;color:#888;margin-bottom:5px}
+    .form-group input{width:100%;border:0.5px solid #ddd;border-radius:8px;padding:10px 12px;font-size:13px;background:#fff;color:#1a1a1a;font-family:inherit}
+    .form-group input:focus{outline:none;border-color:#6daa8f}
+    .opt-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+    .opt-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border:0.5px solid #ddd;border-radius:20px;font-size:12px;cursor:pointer;background:#fff;color:#555;font-family:inherit;transition:all 0.15s}
+    .opt-btn.selected{border-color:#6daa8f;background:#f0f8f0;color:#3b7a5a}
+    .opt-btn input{width:13px;height:13px;accent-color:#6daa8f}
+
+    /* 약관 */
+    .terms-wrap{margin-bottom:14px}
+    .terms-check-row{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+    .terms-check-row input{width:15px;height:15px;accent-color:#6daa8f;cursor:pointer}
+    .terms-toggle{background:none;border:none;cursor:pointer;font-size:11px;color:#aaa;margin-left:4px;font-family:inherit}
+    .terms-content{display:none;margin-top:10px;padding:12px;background:#f9f9f7;border-radius:8px;font-size:11px;color:#777;line-height:1.8;white-space:pre-line}
+    .terms-content.open{display:block}
+    .terms-fold{display:block;text-align:center;margin-top:6px;font-size:11px;color:#aaa;cursor:pointer}
+
+    /* 제출 버튼 */
+    .submit-btn{width:100%;padding:14px;background:#3b7a5a;color:#fff;border:none;border-radius:10px;font-size:15px;font-family:inherit;cursor:pointer;font-weight:500;margin-top:4px;transition:background 0.2s}
+    .submit-btn:hover{background:#2f6349}
+    .submit-btn:disabled{background:#bbb;cursor:default}
+
+    /* 성공 메시지 */
+    .success-msg{text-align:center;padding:40px 20px}
+    .success-msg .icon{font-size:48px;margin-bottom:16px}
+    .success-msg h2{font-size:18px;font-weight:500;margin-bottom:8px}
+    .success-msg p{font-size:13px;color:#888;line-height:1.8}
+
+    /* 에러 */
+    .err-bar{padding:10px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin-bottom:12px;display:none}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="site-header">
+    <div class="site-title">🌲 트리하우스</div>
+    <div class="site-sub">예약 신청</div>
+  </div>
+
+  <!-- 캘린더 -->
+  <div class="cal-wrap">
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">&#8249;</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- 안내사항 -->
+  <div class="notice-wrap" id="noticeWrap" style="display:none">
+    <div class="notice-title">안내사항</div>
+    <div id="noticeText"></div>
+  </div>
+
+  <!-- 예약 신청 폼 -->
+  <div class="book-form" id="bookFormWrap" style="display:none">
+    <h2 id="bookFormTitle">예약 신청</h2>
+    <div class="book-form-sub" id="bookFormSub"></div>
+    <div class="err-bar" id="formErrBar"></div>
+
+    <div class="form-group">
+      <label>이름 *</label>
+      <input type="text" id="cName" placeholder="홍길동">
+    </div>
+    <div class="form-group">
+      <label>연락처 *</label>
+      <input type="tel" id="cPhone" placeholder="01012345678">
+    </div>
+    <div class="form-group">
+      <label>인원수 *</label>
+      <input type="number" id="cPeople" placeholder="2" min="1" max="20" value="2">
+    </div>
+    <div class="form-group">
+      <label>현금영수증 번호</label>
+      <input type="text" id="cReceipt" placeholder="연락처와 다를 경우 기재">
+    </div>
+    <div class="form-group" id="cOptSection" style="display:none">
+      <label>옵션</label>
+      <div class="opt-list" id="cOptList"></div>
+    </div>
+
+    <!-- 약관 -->
+    <div class="terms-wrap">
+      <div class="terms-check-row">
+        <input type="checkbox" id="cTerms">
+        <span>개인정보 및 이용약관에 동의합니다</span>
+        <button class="terms-toggle" onclick="toggleTerms()">더보기 ∨</button>
+      </div>
+      <div class="terms-content" id="termsContent">개인정보 수집 및 이용 동의
+
+수집 항목: 이름, 연락처, 현금영수증 번호 (선택)
+수집 목적: 예약 확인 및 안내
+보유 기간: 예약 종료 후 1년
+
+이용약관
+
+1. 예약 신청 후 관리자 확인 후 확정 연락 드립니다.
+2. 취소 및 환불은 예약 확정 후 별도 안내 기준을 따릅니다.
+3. 당일 취소는 환불이 불가할 수 있습니다.
+4. 바베큐 신청은 전날까지 가능합니다.
+5. 반려동물은 동반 불가합니다.
+6. 시설 내 흡연은 금지입니다.
+<button class="terms-fold" onclick="toggleTerms()">^ 접기</button></div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitBooking()">예약 신청</button>
+  </div>
+
+  <!-- 성공 메시지 -->
+  <div class="success-msg" id="successMsg" style="display:none">
+    <div class="icon">🎉</div>
+    <h2>예약 신청 완료!</h2>
+    <p>예약 신청이 접수되었습니다.<br>확인 후 연락드리겠습니다.<br><br>감사합니다 🌲</p>
+  </div>
+</div>
+
+<script type="module">
+import{createClient}from'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const SUPABASE_URL='https://vnbjxjfbvwvoeoubyzmw.supabase.co'
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuYmp4amZidnd2b2VvdWJ5em13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNjU0NzYsImV4cCI6MjA5Mjg0MTQ3Nn0.9UadF0dLvBGpZsAAEbl6Fviuk7_m_jreOfovSJV_px8'
+const sb=createClient(SUPABASE_URL,SUPABASE_KEY)
+
+const HIDE_FROM='2026-05-26'
+const HIDE_ROOMS=['허클베리','톰소여']
+const ALL_HOUSES=['허클베리','톰소여','상수리','은행','비버튼']
+const HOLIDAYS=['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01','2026-05-05','2026-05-25','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25']
+
+let allData=[],optionsData=[],pricingData=[],discountData=[]
+let today=new Date(),curYear=today.getFullYear(),curMonth=today.getMonth()
+let selectedHouse='',selectedDate='',selectedYear=0,selectedMonth=0,selectedDay=0
+
+window.changeMonth=changeMonth
+window.toggleTerms=toggleTerms
+window.submitBooking=submitBooking
+
+async function init(){
+  try{
+    const[rr,or,pr,dr,sr]=await Promise.all([
+      sb.from('reservations').select('visit_date,room_name,status,is_cancelled,booking_type').order('visit_date',{ascending:true}),
+      sb.from('options').select('*').eq('is_active',true),
+      sb.from('pricing').select('*'),
+      sb.from('discounts').select('*'),
+      sb.from('site_settings').select('*').eq('key','customer_notice')
+    ])
+    allData=rr.data||[];optionsData=or.data||[];pricingData=pr.data||[];discountData=dr.data||[]
+    // 안내사항
+    if(sr.data&&sr.data[0]&&sr.data[0].value){
+      document.getElementById('noticeText').textContent=sr.data[0].value
+      document.getElementById('noticeWrap').style.display='block'
+    }
+    buildCalendar()
+  }catch(e){console.error('[init]',e)}
+}
+
+function getVisibleHouses(iso){
+  if(iso>=HIDE_FROM)return ALL_HOUSES.filter(h=>!HIDE_ROOMS.includes(h))
+  return ALL_HOUSES
+}
+
+function isTaken(house,isoDay){
+  return allData.some(r=>
+    r.room_name===house&&
+    r.visit_date&&r.visit_date.startsWith(isoDay)&&
+    !r.is_cancelled&&r.status!=='취소'&&r.status!=='취소요청'
+  )
+}
+
+function pad(n){return String(n).padStart(2,'0')}
+function fmtISO(d){return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function isHoliday(y,m,d){return HOLIDAYS.includes(`${y}-${pad(m+1)}-${pad(d)}`)}
+function isWeekend(y,m,d){const dow=new Date(y,m,d).getDay();return dow===0||dow===6}
+
+function buildCalendar(){
+  document.getElementById('calMonthLabel').textContent=`${curYear}년 ${curMonth+1}월`
+  const grid=document.getElementById('calGrid');grid.innerHTML=''
+  ;['일','월','화','수','목','금','토'].forEach((d,i)=>{
+    const el=document.createElement('div');el.className='cal-dow'+(i===0?' sun':i===6?' sat':'');el.textContent=d;grid.appendChild(el)
+  })
+  const first=new Date(curYear,curMonth,1);const startDay=first.getDay()
+  // 이전달 빈칸
+  const prevY=curMonth===0?curYear-1:curYear;const prevM=curMonth===0?11:curMonth-1
+  const prevDays=new Date(prevY,prevM+1,0).getDate()
+  for(let i=0;i<startDay;i++){
+    const d=prevDays-startDay+1+i
+    const el=document.createElement('div');el.className='cal-cell other-month'
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    grid.appendChild(el)
+  }
+  const days=new Date(curYear,curMonth+1,0).getDate()
+  const todayISO=fmtISO(today)
+  for(let d=1;d<=days;d++){
+    const isoDay=`${curYear}-${pad(curMonth+1)}-${pad(d)}`
+    const isPast=isoDay<todayISO
+    const el=document.createElement('div');el.className='cal-cell'
+    const dow=(startDay+d-1)%7
+    if(dow===0)el.classList.add('col-sun');if(dow===6)el.classList.add('col-sat')
+    if(isHoliday(curYear,curMonth,d))el.classList.add('col-holiday')
+    if(isoDay===selectedDate)el.classList.add('selected-day')
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    const visible=getVisibleHouses(isoDay)
+    visible.forEach(h=>{
+      const taken=isTaken(h,isoDay)
+      const span=document.createElement('div')
+      if(isPast||taken){
+        span.className='c-room taken';span.textContent=h
+      }else{
+        span.className='c-room free';span.textContent=h
+        span.onclick=()=>selectRoom(h,curYear,curMonth+1,d,isoDay)
+      }
+      el.appendChild(span)
+    })
+    grid.appendChild(el)
+  }
+  // 다음달 빈칸
+  const nextY=curMonth===11?curYear+1:curYear;const nextM=curMonth===11?0:curMonth+1
+  const total=startDay+days;const rem=(7-total%7)%7
+  for(let d=1;d<=rem;d++){
+    const el=document.createElement('div');el.className='cal-cell other-month'
+    const dn=document.createElement('div');dn.className='cal-date-num';dn.textContent=d;el.appendChild(dn)
+    grid.appendChild(el)
+  }
+}
+
+function selectRoom(house,y,m,d,isoDay){
+  selectedHouse=house;selectedDate=isoDay;selectedYear=y;selectedMonth=m;selectedDay=d
+  buildCalendar()
+  // 폼 표시
+  const wknd=isWeekend(y,m-1,d)
+  document.getElementById('bookFormTitle').textContent=`예약 신청`
+  document.getElementById('bookFormSub').textContent=`${house}  ·  ${y}년 ${m}월 ${d}일 (${wknd?'주말':'주중'})`
+  // 옵션 표시
+  const opts=optionsData.filter(o=>(o.apply_rooms||[]).includes(house))
+  const optSection=document.getElementById('cOptSection')
+  const optList=document.getElementById('cOptList')
+  optList.innerHTML=''
+  if(opts.length){
+    opts.forEach(o=>{
+      const btn=document.createElement('label');btn.className='opt-btn'
+      btn.innerHTML=`<input type="checkbox" value="${o.id}"> ${o.name} (+${Number(o.discount_price||o.price).toLocaleString()}원)`
+      optList.appendChild(btn)
+    })
+    optSection.style.display='block'
+  }else{optSection.style.display='none'}
+  document.getElementById('bookFormWrap').style.display='block'
+  document.getElementById('bookFormWrap').scrollIntoView({behavior:'smooth',block:'start'})
+}
+
+function toggleTerms(){
+  const c=document.getElementById('termsContent')
+  c.classList.toggle('open')
+}
+
+async function submitBooking(){
+  const name=document.getElementById('cName').value.trim()
+  const phone=document.getElementById('cPhone').value.trim()
+  const people=parseInt(document.getElementById('cPeople').value)||0
+  const receipt=document.getElementById('cReceipt').value.trim()
+  const terms=document.getElementById('cTerms').checked
+  const errBar=document.getElementById('formErrBar')
+  errBar.style.display='none'
+
+  if(!name||!phone||!people){errBar.textContent='이름, 연락처, 인원수를 입력해주세요.';errBar.style.display='block';return}
+  if(!terms){errBar.textContent='이용약관에 동의해주세요.';errBar.style.display='block';return}
+  if(!selectedHouse||!selectedDate){errBar.textContent='캘린더에서 날짜와 객실을 선택해주세요.';errBar.style.display='block';return}
+
+  // 중복 재확인
+  const dup=allData.find(r=>r.room_name===selectedHouse&&r.visit_date&&r.visit_date.startsWith(selectedDate)&&!r.is_cancelled&&r.status!=='취소'&&r.status!=='취소요청')
+  if(dup){errBar.textContent='선택하신 날짜/객실은 이미 예약이 있습니다. 다른 날짜를 선택해주세요.';errBar.style.display='block';return}
+
+  const selOpts=[...document.querySelectorAll('#cOptList input:checked')].map(c=>c.value)
+  const hasBBQ=selOpts.some(oid=>optionsData.find(o=>o.id===oid&&o.name==='바베큐'))
+
+  // 가격 계산
+  const p=pricingData.find(x=>x.room_name===selectedHouse)
+  const wknd=isWeekend(selectedYear,selectedMonth-1,selectedDay)
+  const isHol=HOLIDAYS.includes(selectedDate)
+  const disc=discountData.find(d=>d.room_name===selectedHouse&&selectedDate>=d.start_date&&selectedDate<=d.end_date)
+  let base=0
+  if(p){
+    if(disc){
+      if(isHol&&disc.holiday_price)base=disc.holiday_price
+      else if(wknd&&disc.weekend_price)base=disc.weekend_price
+      else if(!wknd&&disc.weekday_price)base=disc.weekday_price
+      else base=wknd?p.weekend_price:p.weekday_price
+    }else{base=wknd?p.weekend_price:p.weekday_price}
+    const extra=Math.max(0,people-(p.base_people||2))
+    const unit=p.season_discount>0?p.season_discount:p.extra_per_person
+    const optTotal=selOpts.reduce((s,oid)=>{const o=optionsData.find(x=>x.id===oid);return s+(o?(o.discount_price||o.price):0)},0)
+    base=base+(extra*unit)+optTotal
+  }
+
+  const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='신청 중...'
+  try{
+    const fmtISO2=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
+    const{error}=await sb.from('reservations').insert([{
+      visit_date:selectedDate,booking_date:fmtISO2(new Date()),
+      room_name:selectedHouse,customer_name:name,customer_phone:phone,
+      people_count:people,bbq:hasBBQ,total_paid:base||null,
+      status:'대기',booking_type:'reservation',is_cancelled:false,
+      vat_number:receipt||null,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }])
+    if(error)throw error
+    document.getElementById('bookFormWrap').style.display='none'
+    document.getElementById('successMsg').style.display='block'
+    document.getElementById('successMsg').scrollIntoView({behavior:'smooth'})
+  }catch(e){
+    console.error('[submitBooking]',e)
+    errBar.textContent='예약 신청에 실패했습니다. 다시 시도해주세요.';errBar.style.display='block'
+    btn.disabled=false;btn.textContent='예약 신청'
+  }
+}
+
+function changeMonth(dir){
+  curMonth+=dir
+  if(curMonth>11){curMonth=0;curYear++}else if(curMonth<0){curMonth=11;curYear--}
+  buildCalendar()
+}
+
+init()
+</script>
+</body>
+</html>
