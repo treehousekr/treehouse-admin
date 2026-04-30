@@ -1,5 +1,11 @@
 {
   "buildCommand": "echo done",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/customer", "destination": "/customer.html" },
+    { "source": "/mybooking", "destination": "/mybooking.html" }
+  ]
 }
