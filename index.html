@@ -286,12 +286,15 @@
   <div class="section">
     <div class="section-header">
       <span class="section-title">승인함</span>
-      <span id="waitCount" style="font-size:11px;color:#854f0b" style="font-size:11px;color:#854f0b"></span>
+      <button class="btn-sm btn-confirm" onclick="bulkWaitAction('confirm')" style="margin-left:8px">확정</button>
+      <button class="btn-sm btn-cancel-action" onclick="bulkWaitAction('cancel')">취소</button>
+      <button class="btn-sm btn-refund" onclick="bulkWaitAction('refund')">환불</button>
+      <span id="waitCount" style="font-size:11px;color:#854f0b;margin-left:8px"></span>
     </div>
     <div style="overflow-x:auto">
       <table class="tbl">
         <thead><tr>
-          <th style="width:22px"><input type="checkbox" style="width:11px"></th>
+          <th style="width:22px"><input type="checkbox" id="chkAllWait" style="width:11px" onchange="toggleAllCheck('wait',this.checked)"></th>
           <th style="width:58px">신청일</th>
           <th style="width:58px">방문일</th>
           <th style="width:62px">객실</th>
@@ -303,9 +306,8 @@
           <th style="width:62px">결제금액</th>
           <th style="width:58px">상태</th>
           <th>메모</th>
-          <th style="width:80px">처리</th>
         </tr></thead>
-        <tbody id="waitTbody"><tr class="empty-row"><td colspan="13" style="text-align:center;padding:18px;color:#888">불러오는 중...</td></tr></tbody>
+        <tbody id="waitTbody"><tr class="empty-row"><td colspan="12" style="text-align:center;padding:18px;color:#888">불러오는 중...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -625,7 +627,7 @@ let bookingCtx={house:'',year:0,month:0,day:0,isWeekend:false,isoDate:''}
 const G={changeMonth,changeDay,setTab,openRoomDropdown,setRoomFilter,sortToggle,exportCSV,openCustomerMgmt,saveCustomerMgmt,openUnblockConfirm,confirmUnblock,
   closeAll,openSettingPopup,openDiscountPopup,openOptionPopup,openDetail,openSwim,
   toggleBBQ,editCell,updateStatus,saveBooking,calcPrice,savePricing,cancelSelected,
-  toggleAllCheck,saveDetail,toggleReview,doRefund,addDiscount,deleteDiscount,
+  toggleAllCheck,saveDetail,toggleReview,bulkWaitAction,addDiscount,deleteDiscount,
   addOption,toggleOption,deleteOption,openScheduleAddPopup,saveScheduleAdd,
   deleteScheduleFromView,onBlockToggle,onBpmChange,formatBookPhone}
 Object.keys(G).forEach(k=>window[k]=G[k])
@@ -748,7 +750,8 @@ function fmtArrivalInput(raw){
 }
 
 function toggleAllCheck(section,checked){
-  document.getElementById(section==='date'?'dateTbody':'allTbody').querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=checked)
+  const id=section==='date'?'dateTbody':section==='wait'?'waitTbody':'allTbody'
+  document.getElementById(id).querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=checked)
 }
 
 async function cancelSelected(section){
@@ -1033,7 +1036,8 @@ function buildWait(){
   const tbody=document.getElementById('waitTbody');tbody.innerHTML=''
   const rows=allData.filter(r=>(r.status==='대기'||r.status==='취소요청')&&!r.is_cancelled&&r.booking_type!=='block')
   document.getElementById('waitCount').textContent=rows.length?`${rows.length}건`:''
-  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="13">대기 중인 예약이 없습니다</td></tr>';return}
+  const chkAll=document.getElementById('chkAllWait');if(chkAll)chkAll.checked=false
+  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="12">대기 중인 예약이 없습니다</td></tr>';return}
   rows.sort((a,b)=>(a.visit_date||'').localeCompare(b.visit_date||''))
   rows.forEach(r=>{
     const tr=document.createElement('tr')
@@ -1041,12 +1045,8 @@ function buildWait(){
     const statusBadge=isCR?'<span class="badge badge-cancel-req">취소요청</span>':'<span class="badge badge-wait">대기</span>'
     const changeDot=r.has_customer_change?'<span class="change-dot" title="고객 변경 사항"></span>':''
     const memo=isCR?(r.refund_account?`환불: ${r.refund_account}`:r.memo||'-'):(r.memo||'-')
-    const btns=isCR
-      ?`<button class="btn-sm btn-refund" onclick="doRefund('${r.id}')">환불</button>`
-      :`<button class="btn-sm btn-confirm" onclick="updateStatus('${r.id}','예약완료')">확정</button> <button class="btn-sm btn-cancel-action" onclick="updateStatus('${r.id}','취소요청')">취소</button>`
-    const btnsComplete=r.status==='예약완료'?`<button class="btn-sm" style="background:#faeeda;color:#854f0b;border-color:#e8c97a" onclick="updateStatus('${r.id}','대기')">대기로</button>`:``
     tr.innerHTML=`
-      <td><input type="checkbox" data-id="${r.id}" style="width:11px"></td>
+      <td><input type="checkbox" data-id="${r.id}" data-status="${r.status}" style="width:11px"></td>
       <td>${fmtDate(r.booking_date)}</td><td>${fmtDate(r.visit_date)}</td><td>${r.room_name||'-'}</td>
       <td class="edit-cell" ondblclick="openDetail('${r.id}')">${r.customer_name||'-'}</td>
       <td class="edit-cell" onclick="editCell(event,'${r.id}','people_count')">${r.people_count?r.people_count+'인':'-'}</td>
@@ -1055,19 +1055,31 @@ function buildWait(){
       <td>${fmtPhone(r.customer_phone)}</td>
       <td class="edit-cell" onclick="editCell(event,'${r.id}','total_paid')">${r.total_paid?fmt(r.total_paid):'-'}</td>
       <td>${statusBadge}${changeDot}</td>
-      <td class="edit-cell" onclick="editCell(event,'${r.id}','memo')">${memo}</td>
-      <td>${btns}</td>`
+      <td class="edit-cell" onclick="editCell(event,'${r.id}','memo')">${memo}</td>`
     tbody.appendChild(tr)
   })
 }
 
-async function doRefund(id){
-  if(!confirm('환불 처리하시겠습니까?'))return
+async function bulkWaitAction(action){
+  const tbody=document.getElementById('waitTbody')
+  const checked=[...tbody.querySelectorAll('input[type=checkbox]:checked')]
+  if(!checked.length){alert('처리할 예약을 선택해주세요.');return}
+  const labels={confirm:'확정',cancel:'취소요청',refund:'환불'}
+  const need=action==='refund'?'취소요청':'대기'
+  const targets=checked.filter(c=>c.dataset.status===need)
+  if(!targets.length){alert(`${labels[action]} 처리할 수 있는 ${need} 상태의 예약이 선택되지 않았습니다.`);return}
+  if(!confirm(`${targets.length}건을 ${labels[action]} 처리하시겠습니까?`))return
+  const ids=targets.map(c=>c.dataset.id)
   try{
-    const{error}=await sb.from('reservations').update({status:'취소',is_cancelled:true,updated_at:new Date().toISOString()}).eq('id',id)
-    if(error)throw error
+    for(const id of ids){
+      const patch=action==='confirm'?{status:'예약완료'}
+        :action==='cancel'?{status:'취소요청'}
+        :{status:'취소',is_cancelled:true}
+      const{error}=await sb.from('reservations').update({...patch,updated_at:new Date().toISOString()}).eq('id',id)
+      if(error)throw error
+    }
     await reloadReservations()
-  }catch(e){console.error('[doRefund]',e);showError('저장에 실패했습니다: '+e.message)}
+  }catch(e){console.error('[bulkWaitAction]',e);showError('저장에 실패했습니다: '+e.message)}
 }
 
 // ── 전체목록 ──
