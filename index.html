@@ -1178,7 +1178,20 @@ function editCell(e,id,field){
   inp.onkeydown=ev=>{if(ev.key==='Enter')inp.blur()}
 }
 
-function toggleBBQ(e,id){e.stopPropagation();const row=allData.find(r=>r.id===id);if(!row)return;row.bbq=!row.bbq;saveField(id,'bbq',row.bbq)}
+async function toggleBBQ(e,id){
+  e.stopPropagation()
+  const row=allData.find(r=>r.id===id);if(!row)return
+  const bbqOpt=optionsData.find(o=>o.name==='바베큐')
+  const bbqPrice=bbqOpt?(bbqOpt.discount_price||bbqOpt.price||0):0
+  const newBbq=!row.bbq
+  const newTotal=Math.max(0,(row.total_paid||0)+(newBbq?bbqPrice:-bbqPrice))
+  row.bbq=newBbq;row.total_paid=newTotal
+  try{
+    const{error}=await sb.from('reservations').update({bbq:newBbq,total_paid:newTotal,updated_at:new Date().toISOString()}).eq('id',id)
+    if(error)throw error
+    await reloadReservations()
+  }catch(err){console.error('[toggleBBQ]',err);showError('저장에 실패했습니다: '+err.message)}
+}
 function toggleReview(e,id){e.stopPropagation();const row=allData.find(r=>r.id===id);if(!row)return;const v=row.review?null:'O';row.review=v;saveField(id,'review',v)}
 
 function openSwim(e,id){
