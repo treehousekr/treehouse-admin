@@ -543,7 +543,7 @@ async function submitBooking(){
       total_paid:base||null,
       status:'대기',booking_type:'reservation',is_cancelled:false,
       vat_number:receipt?receipt.replace(/\D/g,''):null,
-      customer_token:token,
+      access_token:token,
       created_at:new Date().toISOString(),updated_at:new Date().toISOString()
     }])
     if(error)throw error
@@ -568,13 +568,14 @@ function generateToken(){
 }
 
 function showPaymentInfo({name,room,date,total,bbq,bbqPrice,token}){
-  const bank=siteSettings['payment_bank']||'(은행명 미설정)'
-  const account=siteSettings['payment_account']||'(계좌번호 미설정)'
-  const holder=siteSettings['payment_holder']||'(예금주 미설정)'
+  // 객실별 계좌 우선, 없으면 통합 계좌 fallback
+  const bank=siteSettings['payment_'+room+'_bank']||siteSettings['payment_bank']||'(은행명 미설정)'
+  const account=siteSettings['payment_'+room+'_account']||siteSettings['payment_account']||'(계좌번호 미설정)'
+  const holder=siteSettings['payment_'+room+'_holder']||siteSettings['payment_holder']||'(예금주 미설정)'
   const timeoutHours=parseInt(siteSettings['payment_timeout_hours']||'3')
-  // 토큰 링크 → mybooking.html
-  const baseUrl=location.origin+location.pathname.replace(/customer\.html.*$/,'')
-  const myLink=`${baseUrl}mybooking.html?token=${token}`
+  // 토큰 링크 → /my-booking/{token}
+  const baseUrl=location.origin
+  const myLink=`${baseUrl}/my-booking/${token}`
   const dateLabel=date.split('-').slice(1).join('/')
   const successEl=document.getElementById('successMsg')
   successEl.innerHTML=`

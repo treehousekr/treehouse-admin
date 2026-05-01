@@ -506,14 +506,12 @@
     </div>
   </div>
   <div class="sub-section" style="margin-top:14px;padding-top:14px;border-top:0.5px solid #e0dfd8">
-    <h4 style="font-size:12px;font-weight:500;margin-bottom:8px;color:#555">입금 계좌 (고객화면 안내)</h4>
-    <div style="display:grid;grid-template-columns:80px 1fr;gap:6px 10px;font-size:12px;align-items:center">
-      <span style="color:#888">은행</span>
-      <input type="text" id="setPayBank" placeholder="예: 국민은행" style="border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;font-family:inherit">
-      <span style="color:#888">계좌번호</span>
-      <input type="text" id="setPayAccount" placeholder="예: 123-45-6789-012" style="border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;font-family:inherit">
-      <span style="color:#888">예금주</span>
-      <input type="text" id="setPayHolder" placeholder="예: 홍길동" style="border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;font-family:inherit">
+    <h4 style="font-size:12px;font-weight:500;margin-bottom:4px;color:#555">입금 계좌 (객실별)</h4>
+    <p style="font-size:10px;color:#aaa;margin-bottom:8px">고객 페이지에서 객실에 맞는 계좌가 표시됩니다.</p>
+    <div id="payAccountList" style="display:flex;flex-direction:column;gap:10px">
+      <!-- 객실별 카드를 JS에서 렌더 -->
+    </div>
+    <div style="display:grid;grid-template-columns:80px 1fr;gap:6px 10px;font-size:12px;align-items:center;margin-top:14px;padding-top:10px;border-top:0.5px dashed #e0dfd8">
       <span style="color:#888">자동취소</span>
       <div style="display:flex;align-items:center;gap:6px">
         <input type="number" id="setPayTimeout" min="1" max="72" value="3" style="border:0.5px solid #ccc;border-radius:5px;padding:5px 8px;font-size:11px;background:#fff;width:60px;font-family:inherit">
@@ -649,7 +647,7 @@ function onBpmChange(){
 async function loadAll(){
   try{
     const[rr,pr,dr,or,sr,settingsR]=await Promise.all([
-      sb.from('reservations').select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type,customer_token,companions,review_history,review_updated_at,has_customer_change').order('visit_date',{ascending:true}),
+      sb.from('reservations').select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type,access_token,companions,review_history,review_updated_at,has_customer_change').order('visit_date',{ascending:true}),
       sb.from('pricing').select('*'),
       sb.from('discounts').select('*').order('start_date',{ascending:true}),
       sb.from('options').select('*'),
@@ -667,7 +665,7 @@ async function loadAll(){
 
 async function reloadReservations(){
   const{data,error}=await sb.from('reservations')
-    .select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type,customer_token,companions,review_history,review_updated_at,has_customer_change')
+    .select('id,visit_date,booking_date,room_name,customer_name,customer_phone,total_paid,status,payment_status,memo,admin_memo,people_count,swim_time,arrival_time,is_cancelled,bbq,refund_account,review,companion_name,companion_phone,booking_type,access_token,companions,review_history,review_updated_at,has_customer_change')
     .order('visit_date',{ascending:true})
   if(error){console.error('[reloadReservations]',error);showError('데이터 갱신 실패: '+error.message);return}
   allData=data||[]
@@ -1201,8 +1199,8 @@ async function openDetail(id){
   document.getElementById('popupName').textContent=row.customer_name||'고객'
   // 토큰 영역 (상단)
   let tokenBlock=''
-  if(row.customer_token){
-    const link=`${location.origin}${location.pathname.replace(/index\.html$/,'')}mybooking.html?token=${row.customer_token}`
+  if(row.access_token){
+    const link=`${location.origin}/my-booking/${row.access_token}`
     tokenBlock=`
       <div style="background:#f0f8f0;border:1px solid #c8e0c8;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px">
         <div style="color:#3b7a5a;font-weight:500;margin-bottom:3px">📌 고객 전용 링크</div>
@@ -1385,10 +1383,8 @@ function openSettingPopup(){
     document.getElementById('bpDate').value=''
   }
   onBpmChange()
-  // 입금계좌
-  document.getElementById('setPayBank').value=siteSettings['payment_bank']||''
-  document.getElementById('setPayAccount').value=siteSettings['payment_account']||''
-  document.getElementById('setPayHolder').value=siteSettings['payment_holder']||''
+  // 입금계좌 (객실별) 렌더
+  buildPayAccountList()
   document.getElementById('setPayTimeout').value=siteSettings['payment_timeout_hours']||3
   // 입실안내 링크 (객실별)
   ;['허클베리','톰소여','상수리','은행','비버튼'].forEach(room=>{
@@ -1397,6 +1393,34 @@ function openSettingPopup(){
   })
   document.getElementById('settingPopup').classList.add('show');document.getElementById('overlay').classList.add('show')
   document.getElementById('btnSetting').classList.add('active-tool')
+}
+
+function buildPayAccountList(){
+  const wrap=document.getElementById('payAccountList')
+  wrap.innerHTML=''
+  ;['허클베리','톰소여','상수리','은행','비버튼'].forEach(room=>{
+    const bank=siteSettings['payment_'+room+'_bank']||''
+    const account=siteSettings['payment_'+room+'_account']||''
+    const holder=siteSettings['payment_'+room+'_holder']||''
+    const card=document.createElement('div')
+    card.style.cssText='border:0.5px solid #e0dfd8;border-radius:6px;padding:8px 10px'
+    card.innerHTML=`
+      <div style="font-weight:500;font-size:11px;color:#3b7a5a;margin-bottom:6px">${room}</div>
+      <div style="display:grid;grid-template-columns:60px 1fr;gap:4px 8px;font-size:11px;align-items:center">
+        <span style="color:#888">은행</span>
+        <input type="text" id="setPay_${room}_bank" value="${escapeHtmlAttr(bank)}" placeholder="예: 국민은행" style="border:0.5px solid #ccc;border-radius:4px;padding:4px 7px;font-size:11px;background:#fff;font-family:inherit">
+        <span style="color:#888">계좌번호</span>
+        <input type="text" id="setPay_${room}_account" value="${escapeHtmlAttr(account)}" placeholder="123-45-6789-012" style="border:0.5px solid #ccc;border-radius:4px;padding:4px 7px;font-size:11px;background:#fff;font-family:inherit">
+        <span style="color:#888">예금주</span>
+        <input type="text" id="setPay_${room}_holder" value="${escapeHtmlAttr(holder)}" placeholder="홍길동" style="border:0.5px solid #ccc;border-radius:4px;padding:4px 7px;font-size:11px;background:#fff;font-family:inherit">
+      </div>
+    `
+    wrap.appendChild(card)
+  })
+}
+function escapeHtmlAttr(s){
+  if(s===null||s===undefined)return''
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
 }
 function buildPriceTable(){
   const tbody=document.getElementById('priceTbody');tbody.innerHTML=''
@@ -1443,21 +1467,20 @@ async function savePricing(){
     siteSettings['booking_period_value']=value
     if(mode==='days')siteSettings['booking_deadline_days']=value
 
-    // 입금 계좌
-    const bank=document.getElementById('setPayBank').value.trim()
-    const account=document.getElementById('setPayAccount').value.trim()
-    const holder=document.getElementById('setPayHolder').value.trim()
+    // 입금 계좌 (객실별)
     const timeout=String(parseInt(document.getElementById('setPayTimeout').value)||3)
-    await sb.from('site_settings').upsert([
-      {key:'payment_bank',value:bank,updated_at:new Date().toISOString()},
-      {key:'payment_account',value:account,updated_at:new Date().toISOString()},
-      {key:'payment_holder',value:holder,updated_at:new Date().toISOString()},
-      {key:'payment_timeout_hours',value:timeout,updated_at:new Date().toISOString()}
-    ])
-    siteSettings['payment_bank']=bank
-    siteSettings['payment_account']=account
-    siteSettings['payment_holder']=holder
+    const payUpserts=[{key:'payment_timeout_hours',value:timeout,updated_at:new Date().toISOString()}]
     siteSettings['payment_timeout_hours']=timeout
+    ;['허클베리','톰소여','상수리','은행','비버튼'].forEach(room=>{
+      ['bank','account','holder'].forEach(field=>{
+        const el=document.getElementById('setPay_'+room+'_'+field)
+        const val=el?el.value.trim():''
+        const key='payment_'+room+'_'+field
+        payUpserts.push({key,value:val,updated_at:new Date().toISOString()})
+        siteSettings[key]=val
+      })
+    })
+    await sb.from('site_settings').upsert(payUpserts)
 
     // 입실 안내 링크 (객실별)
     const checkinUpserts=[]

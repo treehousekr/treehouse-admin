@@ -6,6 +6,7 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/customer", "destination": "/customer.html" },
-    { "source": "/mybooking", "destination": "/mybooking.html" }
+    { "source": "/my-booking", "destination": "/my-booking.html" },
+    { "source": "/my-booking/:token", "destination": "/my-booking.html" }
   ]
 }
