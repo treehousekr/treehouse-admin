@@ -19,14 +19,18 @@
     .error-bar{padding:12px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin:8px}
 
     /* 캘린더 */
+    .cal-toolbar{display:flex;align-items:center;justify-content:space-between;padding:6px 10px 4px;border-bottom:0.5px solid #efeee8}
     .cal-top{display:flex;align-items:center;justify-content:center;padding:8px 10px 5px;position:relative}
-    .cal-tools{position:absolute;left:10px;display:flex;gap:3px;align-items:center}
+    .cal-tools{display:flex;gap:3px;align-items:center}
     .cal-tools button{background:none;border:none;cursor:pointer;font-size:10px;color:#999;padding:1px 4px;border-radius:3px;font-family:inherit}
     .cal-tools button:hover{color:#333;background:#f0f0ee}
     .cal-tools button.active-tool{color:#185fa5;font-weight:500;background:#e6f1fb}
     .cal-right{position:absolute;right:10px;display:flex;gap:4px;align-items:center}
     .cal-right a,.cal-right button{background:none;border:none;cursor:pointer;font-size:10px;color:#bbb;text-decoration:none;font-family:inherit}
     .cal-right a:hover,.cal-right button:hover{color:#888}
+    .cal-toolbar .cal-tools-right{display:flex;gap:4px;align-items:center}
+    .cal-toolbar .cal-tools-right a,.cal-toolbar .cal-tools-right button{background:none;border:none;cursor:pointer;font-size:10px;color:#bbb;text-decoration:none;font-family:inherit;padding:1px 4px;border-radius:3px}
+    .cal-toolbar .cal-tools-right a:hover,.cal-toolbar .cal-tools-right button:hover{color:#888;background:#f0f0ee}
     .cal-nav{display:flex;align-items:center;gap:10px}
     .cal-nav button{background:none;border:none;cursor:pointer;color:#666;font-size:15px;padding:2px 5px}
     .cal-month{font-size:14px;font-weight:500}
@@ -225,21 +229,24 @@
 
   <!-- 캘린더 -->
   <div class="section">
-    <div class="cal-top">
+    <div class="cal-toolbar">
       <div class="cal-tools">
         <button id="btnDiscount" onclick="openDiscountPopup()">할인</button>
         <button id="btnOption" onclick="openOptionPopup()">옵션</button>
         <button id="btnSetting" onclick="openSettingPopup()">설정</button>
       </div>
+      <div class="cal-tools-right">
+        <button id="btnCustomer" onclick="openCustomerMgmt()">고객창관리</button>
+        <a href="customer.html" target="_blank">고객창</a>
+      </div>
+    </div>
+    <div class="cal-top">
       <div class="cal-nav">
         <button onclick="changeMonth(-1)">&#8249;</button>
         <span class="cal-month" id="calMonthLabel"></span>
         <button onclick="changeMonth(1)">&#8250;</button>
       </div>
       <div class="cal-right">
-        <button id="btnCustomer" onclick="openCustomerMgmt()">고객창관리</button>
-        <a href="customer.html" target="_blank">고객창</a>
-        <span style="color:#e0dfd8">|</span>
         <button onclick="openScheduleAddPopup()">일정추가</button>
       </div>
     </div>
