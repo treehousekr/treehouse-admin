@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>내 예약 확인 — 트리하우스</title>
+  <style>
+    @font-face{
+      font-family:'ChosunGu';
+      src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/ChosunGu.woff') format('woff');
+      font-weight:normal;font-style:normal;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'ChosunGu','Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#faf9f7;min-height:100vh}
+    .page{max-width:480px;margin:0 auto;padding:20px 16px 60px}
+
+    .site-header{text-align:center;padding:24px 0 16px}
+    .site-title{font-size:20px;font-weight:500;letter-spacing:0.05em;color:#2c2c2c}
+    .site-sub{font-size:12px;color:#aaa;margin-top:4px}
+
+    .card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.06);margin-bottom:16px}
+    .card h2{font-size:15px;font-weight:500;margin-bottom:12px;color:#2c2c2c}
+
+    .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #f0efea;font-size:13px}
+    .info-row:last-child{border-bottom:none}
+    .info-row .label{color:#888}
+    .info-row .value{color:#1a1a1a;font-weight:500}
+
+    .status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500}
+    .status-대기{background:#fff4d6;color:#8a6500}
+    .status-예약완료{background:#e0f0e0;color:#2e6b3e}
+    .status-취소{background:#f5e0e0;color:#8a3030}
+    .status-취소요청{background:#fff0e0;color:#a35a1a}
+
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:12px;color:#888;margin-bottom:6px}
+    .form-group input[type=text]{width:100%;border:0.5px solid #ddd;border-radius:8px;padding:10px 12px;font-size:13px;background:#fff;color:#1a1a1a;font-family:inherit}
+    .form-group input[type=text]:focus{outline:none;border-color:#6daa8f}
+
+    .toggle-row{display:flex;align-items:center;gap:8px;padding:10px 0}
+    .toggle-row input{width:18px;height:18px;accent-color:#6daa8f;cursor:pointer}
+    .toggle-row label{cursor:pointer;font-size:13px;flex:1}
+
+    /* 바베큐 상세 박스 */
+    .info-btn{background:none;border:0.5px solid #ccc;border-radius:50%;width:22px;height:22px;font-size:12px;color:#888;cursor:pointer;font-family:inherit;flex-shrink:0;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+    .info-btn:hover{background:#f0f8f0;border-color:#6daa8f;color:#3b7a5a}
+    .info-btn.open{background:#f0f8f0;border-color:#6daa8f;color:#3b7a5a;transform:rotate(180deg)}
+    .bbq-details{margin-top:10px;padding:14px 16px;background:#fafaf6;border-radius:10px;font-size:12px;color:#444;line-height:1.9}
+    .bbq-details h4{font-size:13px;font-weight:500;margin-bottom:8px;color:#3b7a5a;text-align:center}
+    .bbq-details .row{display:flex;gap:6px;margin-bottom:2px}
+    .bbq-details .row .key{color:#888;flex-shrink:0;min-width:60px}
+    .bbq-details .row .val{color:#1a1a1a}
+    .bbq-details .sep{height:1px;background:#eaeae0;margin:10px 0}
+    .bbq-details .note-row{font-size:11px;color:#777;margin-top:4px;line-height:1.7}
+
+    /* 안내 힌트 */
+    .form-hint{font-size:11px;color:#aaa;margin-top:6px;line-height:1.5}
+    .form-group input:disabled{background:#f5f5f0;color:#bbb;cursor:not-allowed}
+
+    .pool-list{display:flex;flex-wrap:wrap;gap:8px}
+    .pool-btn{padding:9px 14px;border:0.5px solid #ddd;border-radius:20px;font-size:12px;cursor:pointer;background:#fff;color:#555;font-family:inherit;transition:all 0.15s}
+    .pool-btn.selected{border-color:#6daa8f;background:#f0f8f0;color:#3b7a5a;font-weight:500}
+    .pool-btn:disabled,.pool-btn.taken{background:#f5f5f0;color:#bbb;cursor:not-allowed;text-decoration:line-through;border-color:#eee}
+    .pool-msg{padding:12px;background:#f0f8f0;color:#3b7a5a;border-radius:8px;font-size:12px;line-height:1.6}
+
+    .submit-btn{width:100%;padding:14px;background:#3b7a5a;color:#fff;border:none;border-radius:10px;font-size:15px;font-family:inherit;cursor:pointer;font-weight:500;transition:background 0.2s}
+    .submit-btn:hover{background:#2f6349}
+    .submit-btn:disabled{background:#bbb;cursor:default}
+
+    .cancel-btn{width:100%;padding:12px;background:#fff;color:#a32d2d;border:0.5px solid #d8a0a0;border-radius:10px;font-size:13px;font-family:inherit;cursor:pointer;margin-top:8px}
+    .cancel-btn:hover{background:#fcebeb}
+    .cancel-btn:disabled{color:#aaa;border-color:#ddd;background:#f9f9f9;cursor:default}
+
+    .err-bar{padding:10px 14px;background:#fcebeb;color:#a32d2d;font-size:12px;border-radius:8px;margin-bottom:12px;display:none}
+    .ok-bar{padding:10px 14px;background:#e8f4e8;color:#3b6d11;font-size:12px;border-radius:8px;margin-bottom:12px;display:none}
+
+    .loading{text-align:center;padding:60px 20px;color:#888;font-size:13px}
+    .empty{text-align:center;padding:60px 20px}
+    .empty .icon{font-size:48px;margin-bottom:16px}
+    .empty h2{font-size:16px;font-weight:500;margin-bottom:8px}
+    .empty p{font-size:13px;color:#888;line-height:1.8}
+
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:100}
+    .modal-overlay.show{display:block}
+    .modal{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;padding:24px;z-index:101;width:90%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+    .modal.show{display:block}
+    .modal h3{font-size:15px;font-weight:500;margin-bottom:8px}
+    .modal p{font-size:13px;color:#666;line-height:1.6;margin-bottom:16px}
+    .modal-actions{display:flex;gap:8px}
+    .modal-actions button{flex:1;padding:10px;border-radius:8px;font-size:13px;font-family:inherit;cursor:pointer;border:none}
+    .btn-secondary{background:#f0efea;color:#555}
+    .btn-danger{background:#a32d2d;color:#fff}
+
+    /* 우리 기능 추가 스타일 */
+    .info-row.input-row{align-items:center}
+    .info-row .inline-edit{display:flex;gap:6px;align-items:center}
+    .info-row .inline-edit input{width:60px;border:0.5px solid #ddd;border-radius:6px;padding:6px 8px;font-size:12px;background:#fff;font-family:inherit;text-align:right}
+    .info-row .inline-edit input:focus{outline:none;border-color:#6daa8f}
+    .info-row .inline-edit .btn-mini{padding:5px 10px;background:#fff;border:0.5px solid #6daa8f;color:#3b7a5a;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit}
+    .info-row .inline-edit .btn-mini:hover{background:#f0f8f0}
+
+    .companion-item{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+    .companion-item input{flex:1;border:0.5px solid #ddd;border-radius:6px;padding:7px 10px;font-size:12px;background:#fff;font-family:inherit}
+    .companion-item input:focus{outline:none;border-color:#6daa8f}
+    .companion-item .del{padding:5px 8px;background:#fcebeb;color:#a32d2d;border:0.5px solid #f0b8b8;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit}
+    .companion-add{padding:7px 12px;background:#f0f8f0;color:#3b7a5a;border:0.5px dashed #6daa8f;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;width:100%;margin-top:4px}
+    .companion-add:hover{background:#e0f0e0}
+
+    .pay-card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}
+    .pay-card h3{font-size:13px;color:#888;font-weight:500;margin-bottom:12px}
+    .pay-amount{font-size:24px;font-weight:600;color:#3b7a5a;text-align:right}
+    .pay-amount span{font-size:13px;color:#888;font-weight:400;margin-left:2px}
+    .timeout-bar{background:#fff7e8;border-radius:8px;padding:10px 12px;font-size:12px;color:#8a6d2e;text-align:center;line-height:1.6;margin-top:10px}
+    .confirmed-bar{background:#eaf3de;border-radius:8px;padding:14px;font-size:13px;color:#3b6d11;text-align:center;font-weight:500}
+
+    .review-saved{background:#fff8e8;border-left:2px solid #e8c97a;padding:10px 12px;font-size:12px;color:#555;line-height:1.7;margin-bottom:8px;white-space:pre-wrap;border-radius:6px}
+    textarea.review-input{width:100%;border:0.5px solid #ddd;border-radius:8px;padding:10px 12px;font-size:13px;background:#fff;color:#1a1a1a;font-family:inherit;resize:vertical;min-height:80px}
+    textarea.review-input:focus{outline:none;border-color:#6daa8f}
+
+    .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#3b7a5a;color:#fff;padding:10px 18px;border-radius:24px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:200;display:none}
+    .toast.show{display:block}
+    .toast.error{background:#a32d2d}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="site-header">
+    <div class="site-title">🌲 트리하우스</div>
+    <div class="site-sub">내 예약 확인</div>
+  </div>
+
+  <!-- 로딩 -->
+  <div id="loading" class="loading">예약 정보를 불러오는 중...</div>
+
+  <!-- 토큰 무효 / 예약 없음 -->
+  <div id="emptyView" class="empty" style="display:none">
+    <div class="icon">🔍</div>
+    <h2>예약을 찾을 수 없습니다</h2>
+    <p>링크가 올바른지 다시 한번 확인해주세요.<br>문의가 필요하시면 운영자에게 연락 부탁드립니다.</p>
+  </div>
+
+  <!-- 본문 -->
+  <div id="mainView" style="display:none">
+    <!-- 예약 정보 (읽기전용 + 인원 인라인 편집) -->
+    <div class="card">
+      <h2>예약 정보</h2>
+      <div class="info-row"><span class="label">예약자명</span><span class="value" id="vName"></span></div>
+      <div class="info-row"><span class="label">예약일</span><span class="value" id="vDate"></span></div>
+      <div class="info-row"><span class="label">객실</span><span class="value" id="vRoom"></span></div>
+      <div class="info-row input-row">
+        <span class="label">인원</span>
+        <span class="inline-edit">
+          <input type="number" id="peopleInput" min="1" max="20" style="width:50px;text-align:right">
+          <span style="color:#888;font-size:12px">명</span>
+          <button type="button" class="btn-mini" id="peopleSaveBtn">변경</button>
+        </span>
+      </div>
+      <div class="info-row"><span class="label">결제금액</span><span class="value" id="vTotal">-</span></div>
+      <div class="info-row"><span class="label">예약 상태</span><span class="value" id="vStatus"></span></div>
+    </div>
+
+    <!-- 입금 안내 (대기 상태일 때만) / 확정 메시지 -->
+    <div id="paySection"></div>
+
+    <div class="err-bar" id="errBar"></div>
+    <div class="ok-bar" id="okBar"></div>
+
+    <!-- 편집 가능 폼 -->
+    <div class="card" id="editCard">
+      <h2>예약 변경</h2>
+
+      <!-- 수영 시간 -->
+      <div class="form-group" id="poolGroup">
+        <label>수영 시간</label>
+        <div id="poolContent"></div>
+      </div>
+
+      <!-- 바베큐 그릴 -->
+      <div class="form-group" id="bbqGroup">
+        <label>바베큐 그릴 추가</label>
+        <div class="toggle-row">
+          <input type="checkbox" id="bbqCheck">
+          <label for="bbqCheck">바베큐 그릴 추가 (3만원 / 전날까지 신청 가능)</label>
+          <button type="button" class="info-btn" id="bbqInfoBtn" title="자세히 보기">⌄</button>
+        </div>
+        <div class="bbq-details" id="bbqDetails" style="display:none">
+          <h4>&lt; 바베큐 그릴 &gt;</h4>
+          <div style="text-align:center;color:#888;margin-bottom:10px;font-size:11px">1세트 세팅 기준</div>
+          <div class="row"><span class="key">[구 성]</span><span class="val">그릴 · 석쇠 · 숯 · 번개탄 · 토치 · 집게 · 장갑</span></div>
+          <div class="row"><span class="key">[가 격]</span><span class="val">3만원</span></div>
+          <div class="row"><span class="key">[이용 시간]</span><span class="val">미리 세팅 (언제든 이용하세요!)</span></div>
+          <div class="sep"></div>
+          <div class="row"><span class="key">[신청 가능]</span><span class="val">이용일 전날까지 가능합니다</span></div>
+          <div class="row"><span class="key">[취소 가능]</span><span class="val">당일 취소 가능합니다</span></div>
+          <div class="sep"></div>
+          <div class="note-row">🥩 포함되지 않습니다 — 고기, 식재료</div>
+          <div class="note-row">🖤 위치: 집 앞</div>
+          <div class="sep"></div>
+          <div style="font-weight:500;color:#3b7a5a;margin-bottom:4px">💲 신청 방법</div>
+          <div class="note-row">예약자명으로 입금해주세요</div>
+          <div class="note-row" id="bbqAccountInfo" style="margin-top:6px;font-weight:500;color:#1a1a1a"></div>
+        </div>
+      </div>
+
+      <!-- 도착 예정 시간 -->
+      <div class="form-group">
+        <label>도착 예정 시간</label>
+        <input type="text" id="arrivalInput" placeholder="예) 1430 → 14:30" maxlength="5">
+        <div class="form-hint" id="arrivalHint" style="display:none">방문일 2일 전부터 입력하실 수 있습니다.</div>
+      </div>
+
+      <button class="submit-btn" id="saveBtn">저장하기</button>
+      <button class="cancel-btn" id="cancelBtn">예약 취소 요청</button>
+    </div>
+
+    <!-- 동행인 -->
+    <div class="card" id="companionCard">
+      <h2>동행인 정보</h2>
+      <div id="companionList" style="margin-bottom:6px"></div>
+      <button class="companion-add" id="companionAddBtn">+ 동행인 추가</button>
+      <button class="submit-btn" id="companionSaveBtn" style="margin-top:10px;font-size:13px;padding:10px">저장</button>
+    </div>
+
+    <!-- 입실 방법 (방문일 2일 전부터 표시) -->
+    <div class="card" id="entryInfoCard" style="display:none">
+      <h2>🔑 입실 방법</h2>
+      <div id="entryInfoContent" style="white-space:pre-line;font-size:13px;color:#444;line-height:1.9"></div>
+    </div>
+
+    <!-- 후기 (방문일 이후) -->
+    <div class="card" id="reviewCard" style="display:none">
+      <h2>후기</h2>
+      <p style="font-size:11px;color:#aaa;margin-bottom:10px;line-height:1.7">관리자에게 예약자명은 공개되지 않습니다.</p>
+      <div id="reviewSavedView"></div>
+      <textarea id="reviewInput" class="review-input" placeholder="후기를 남겨주세요"></textarea>
+      <button class="submit-btn" id="reviewSaveBtn" style="margin-top:10px">후기 저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 취소 확인 모달 -->
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal" id="cancelModal">
+  <h3>예약 취소 요청</h3>
+  <p>예약 취소를 요청하시겠습니까?<br>관리자 확인 후 환불이 처리됩니다.</p>
+  <div class="form-group">
+    <label>환불 받으실 계좌</label>
+    <input type="text" id="refundAccInput" placeholder="예: 국민 123-45-678901 홍길동" style="width:100%;border:0.5px solid #ddd;border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit">
+  </div>
+  <div class="modal-actions">
+    <button class="btn-secondary" id="modalCancel">아니요</button>
+    <button class="btn-danger" id="modalConfirm">취소 요청</button>
+  </div>
+</div>
+
+<script type="module">
+import{createClient}from'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const SUPABASE_URL='https://vnbjxjfbvwvoeoubyzmw.supabase.co'
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuYmp4amZidnd2b2VvdWJ5em13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyNjU0NzYsImV4cCI6MjA5Mjg0MTQ3Nn0.9UadF0dLvBGpZsAAEbl6Fviuk7_m_jreOfovSJV_px8'
+const sb=createClient(SUPABASE_URL,SUPABASE_KEY)
+
+// URL에서 토큰 추출 (/my-booking/:token 또는 ?token=xxx 둘 다 허용)
+function getToken(){
+  const path=window.location.pathname
+  const m=path.match(/\/my-booking\/([^/?#]+)/)
+  if(m)return decodeURIComponent(m[1])
+  const params=new URLSearchParams(window.location.search)
+  return params.get('token')||''
+}
+
+// 수영 규칙 — 날짜 + 객실 기준
+const RULE_B_FROM='2026-05-26'
+function getPoolRules(visitDate,room){
+  if(visitDate<RULE_B_FROM){
+    // Rule A (~2026-05-25)
+    if(room==='비버튼'){
+      return {mode:'select',slots:['4:00-5:30','5:40-7:10']}
+    }
+    return {mode:'select',slots:['11:00-12:30','12:40-2:10','2:20-3:50','4:00-5:30','5:40-7:10']}
+  }
+  // Rule B (2026-05-26~)
+  // 전체 슬롯: 11:00~1:00 / 1:00~3:00 / 3:00~5:00 / 5:00~7:00
+  // - 비버튼 손님: 3:00~5:00 + 수영안함
+  // - 상수리/은행 손님: 11:00~1:00 + 1:00~3:00 + 수영안함
+  //   (3:00~5:00은 비버튼 전용, 5:00~7:00은 admin이 늦은 도착 케이스에 부여)
+  // - 허클베리/톰소여: 수영 섹션 자체 숨김
+  if(room==='비버튼'){
+    return {mode:'select',slots:['3:00~5:00']}
+  }
+  if(room==='상수리'||room==='은행'){
+    return {mode:'select',slots:['11:00~1:00','1:00~3:00']}
+  }
+  return {mode:'hidden'}
+}
+
+let reservation=null
+let myPool=null         // 내 pool_bookings 행
+let takenTimes=[]       // 같은 날짜에 다른 예약이 잡은 시간 목록
+let selectedTime=''     // 현재 폼에서 선택된 수영시간
+let siteSettings={}     // site_settings 캐시
+
+const $=(id)=>document.getElementById(id)
+const showErr=(msg)=>{const b=$('errBar');b.textContent=msg;b.style.display='block';$('okBar').style.display='none';window.scrollTo({top:0,behavior:'smooth'})}
+const showOk=(msg)=>{const b=$('okBar');b.textContent=msg;b.style.display='block';$('errBar').style.display='none';window.scrollTo({top:0,behavior:'smooth'})}
+const clearMsg=()=>{$('errBar').style.display='none';$('okBar').style.display='none'}
+
+function formatDate(iso){
+  if(!iso)return ''
+  const [y,m,d]=iso.split('-')
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`
+}
+
+function statusLabel(r){
+  if(r.cancel_request_status==='요청됨')return '취소요청'
+  if(r.is_cancelled)return '취소'
+  return r.status||'대기'
+}
+
+function renderStatus(r){
+  const label=statusLabel(r)
+  const safe=label.replace(/\s/g,'')
+  $('vStatus').innerHTML=`<span class="status-badge status-${safe}">${label}</span>`
+}
+
+function renderPool(){
+  const group=$('poolGroup')
+  const content=$('poolContent')
+  content.innerHTML=''
+  const rules=getPoolRules(reservation.visit_date,reservation.room_name)
+
+  if(rules.mode==='hidden'){
+    group.style.display='none'
+    return
+  }
+  group.style.display='block'
+
+  if(rules.mode==='fixed'){
+    const div=document.createElement('div')
+    div.className='pool-msg'
+    div.textContent=rules.message
+    content.appendChild(div)
+    return
+  }
+
+  // select 모드
+  const list=document.createElement('div')
+  list.className='pool-list'
+
+  // "수영 안함" 옵션
+  const noneBtn=document.createElement('button')
+  noneBtn.type='button'
+  noneBtn.className='pool-btn'+(selectedTime===''?' selected':'')
+  noneBtn.textContent='수영 안함'
+  noneBtn.onclick=()=>{selectedTime='';renderPool()}
+  list.appendChild(noneBtn)
+
+  rules.slots.forEach(t=>{
+    const btn=document.createElement('button')
+    btn.type='button'
+    btn.className='pool-btn'
+    btn.textContent=t
+    const takenByOther=takenTimes.includes(t)
+    if(takenByOther){
+      btn.classList.add('taken')
+      btn.disabled=true
+      btn.title='이미 다른 손님이 선택한 시간입니다'
+    }else if(selectedTime===t){
+      btn.classList.add('selected')
+    }
+    btn.onclick=()=>{
+      if(btn.disabled)return
+      selectedTime=t
+      renderPool()
+    }
+    list.appendChild(btn)
+  })
+  content.appendChild(list)
+}
+
+function renderEditability(r){
+  // 취소 요청 / 취소된 예약은 편집 불가
+  const editable=!r.is_cancelled&&r.status!=='취소'&&r.cancel_request_status!=='요청됨'
+  $('saveBtn').disabled=!editable
+  $('cancelBtn').disabled=!editable
+  if(!editable){
+    $('saveBtn').textContent=r.cancel_request_status==='요청됨'?'취소 요청 처리 중':'편집 불가'
+    $('bbqCheck').disabled=true
+    $('arrivalInput').disabled=true
+    document.querySelectorAll('.pool-btn').forEach(b=>b.disabled=true)
+  }
+}
+
+async function load(){
+  const token=getToken()
+  if(!token||token.length<8){
+    $('loading').style.display='none'
+    $('emptyView').style.display='block'
+    return
+  }
+
+  try{
+    const {data,error}=await sb
+      .from('reservations')
+      .select('id,access_token,visit_date,room_name,customer_name,customer_phone,people_count,total_paid,status,is_cancelled,bbq,bbq_added,arrival_time,swim_time,cancel_request_status,companions,review,review_history,review_updated_at,refund_account,has_customer_change,memo')
+      .eq('access_token',token)
+      .maybeSingle()
+
+    if(error)throw error
+    if(!data){
+      $('loading').style.display='none'
+      $('emptyView').style.display='block'
+      return
+    }
+
+    reservation=data
+
+    // 같은 날짜의 pool_bookings 조회 (분리된 신규 테이블)
+    const {data:pools,error:pErr}=await sb
+      .from('pool_bookings')
+      .select('id,reservation_id,pool_time')
+      .eq('reservation_date',reservation.visit_date)
+    if(pErr)throw pErr
+
+    // 같은 날짜에 다른 예약(관리자가 직접 swim_time을 잡아둔 케이스 포함)도 taken에 포함
+    const {data:otherRes,error:rErr}=await sb
+      .from('reservations')
+      .select('id,swim_time,is_cancelled,status')
+      .eq('visit_date',reservation.visit_date)
+      .not('swim_time','is',null)
+    if(rErr)throw rErr
+
+    myPool=(pools||[]).find(p=>p.reservation_id===reservation.id)||null
+    // selectedTime: reservations.swim_time 가 권위(=admin이 직접 잡아둔 시간 반영). 없으면 pool_bookings.
+    selectedTime=reservation.swim_time||myPool?.pool_time||''
+
+    const fromPools=(pools||[])
+      .filter(p=>p.reservation_id!==reservation.id&&p.pool_time)
+      .map(p=>p.pool_time)
+    const fromRes=(otherRes||[])
+      .filter(r=>r.id!==reservation.id&&r.swim_time&&!r.is_cancelled&&r.status!=='취소')
+      .map(r=>r.swim_time)
+    takenTimes=Array.from(new Set([...fromPools,...fromRes]))
+
+    // site_settings 통합 로드
+    const {data:settings}=await sb.from('site_settings').select('key,value')
+    siteSettings={}
+    ;(settings||[]).forEach(s=>{siteSettings[s.key]=s.value})
+    const entryInfo=siteSettings['customer_entry_info']||''
+
+    // 렌더
+    $('vName').textContent=reservation.customer_name||'-'
+    $('vDate').textContent=formatDate(reservation.visit_date)
+    $('vRoom').textContent=reservation.room_name||'-'
+    $('peopleInput').value=reservation.people_count||1
+    $('vTotal').textContent=reservation.total_paid?Number(reservation.total_paid).toLocaleString()+'원':'-'
+    renderStatus(reservation)
+
+    $('bbqCheck').checked=!!(reservation.bbq_added??reservation.bbq)
+    $('arrivalInput').value=reservation.arrival_time||''
+
+    renderPool()
+    renderBBQAccountInfo()
+    renderEditability(reservation)
+    renderDateGatedSections(reservation,entryInfo)
+    renderPaySection()
+    renderCompanions()
+    renderReview()
+
+    $('loading').style.display='none'
+    $('mainView').style.display='block'
+  }catch(e){
+    console.error('[load]',e)
+    $('loading').style.display='none'
+    $('emptyView').style.display='block'
+  }
+}
+
+// 방문일 기준 날짜 게이팅
+//   - 도착예정시간: 방문일 2일전(D-2)부터 활성, 방문일까지(D-0)
+//   - 입실 방법 카드: D-2 ~ D-0에 표시
+function renderDateGatedSections(r,entryInfo){
+  const visit=r.visit_date  // 'YYYY-MM-DD'
+  if(!visit){$('arrivalInput').disabled=true;return}
+  const todayISO=new Date().toLocaleDateString('sv-SE')
+  // D-2, D-0 계산
+  const v=new Date(visit+'T00:00:00')
+  const d2=new Date(v); d2.setDate(d2.getDate()-2)
+  const d2ISO=d2.toLocaleDateString('sv-SE')
+
+  // (1) 도착예정시간: D-2부터 ~ 방문일(D-0)까지 활성
+  const canArrive=todayISO>=d2ISO&&todayISO<=visit
+  const editable=!r.is_cancelled&&r.status!=='취소'&&r.cancel_request_status!=='요청됨'
+  $('arrivalInput').disabled=!canArrive||!editable
+  $('arrivalHint').style.display=canArrive?'none':'block'
+  if(!canArrive){$('arrivalHint').textContent='방문일 2일 전부터 입력하실 수 있습니다.'}
+
+  // (2) 입실 방법: D-2 ~ D-0에 노출 — 객실별 링크 우선, 없으면 통합 안내
+  const showEntry=todayISO>=d2ISO&&todayISO<=visit
+  if(showEntry){
+    const roomKey='checkin_url_'+(r.room_name||'')
+    const roomUrl=siteSettings[roomKey]
+    if(roomUrl){
+      $('entryInfoContent').innerHTML=`<a href="${escapeHtml(roomUrl)}" target="_blank" style="display:block;text-align:center;padding:12px;background:#f0f8f0;color:#3b7a5a;border-radius:8px;text-decoration:none;font-weight:500">📍 입실 안내 보기</a>`
+      $('entryInfoCard').style.display='block'
+    }else if(entryInfo){
+      $('entryInfoContent').textContent=entryInfo
+      $('entryInfoCard').style.display='block'
+    }else{
+      $('entryInfoCard').style.display='none'
+    }
+  }else{
+    $('entryInfoCard').style.display='none'
+  }
+}
+
+function escapeHtml(s){
+  if(s===null||s===undefined)return''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+function fmtPhone(raw){
+  if(!raw)return''
+  const v=String(raw).replace(/\D/g,'')
+  if(v.length===11)return v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7)
+  if(v.length===10)return v.slice(0,3)+'-'+v.slice(3,6)+'-'+v.slice(6)
+  return raw
+}
+
+function showToast(msg,isError){
+  const t=$('toast')
+  t.textContent=msg;t.className='toast show'+(isError?' error':'')
+  setTimeout(()=>t.classList.remove('show'),2000)
+}
+
+// 객실별 입금 계좌 표시 (BBQ 카드용)
+function renderBBQAccountInfo(){
+  const room=reservation.room_name||''
+  const bank=siteSettings['payment_'+room+'_bank']||''
+  const account=siteSettings['payment_'+room+'_account']||''
+  const holder=siteSettings['payment_'+room+'_holder']||''
+  if(bank||account||holder){
+    $('bbqAccountInfo').textContent=`${room} [${bank}] ${account},  ${holder}`
+  }else{
+    // fallback: 통합 결제 계좌
+    const f1=siteSettings['payment_bank']||''
+    const f2=siteSettings['payment_account']||''
+    const f3=siteSettings['payment_holder']||''
+    $('bbqAccountInfo').textContent=(f1||f2||f3)?`[${f1}] ${f2},  ${f3}`:'관리자에게 문의해주세요'
+  }
+}
+
+// 입금 안내 / 확정 메시지 카드
+function renderPaySection(){
+  const r=reservation
+  const sec=$('paySection')
+  if(r.status==='예약완료'){
+    sec.innerHTML=`<div class="card"><div class="confirmed-bar">✓ 예약이 확정되었습니다</div></div>`
+    return
+  }
+  if(r.status==='취소'||r.is_cancelled){
+    sec.innerHTML=''
+    return
+  }
+  if(r.cancel_request_status==='요청됨'){
+    sec.innerHTML=`<div class="card"><div style="background:#fcebeb;border-radius:8px;padding:14px;font-size:13px;color:#a32d2d;text-align:center">취소 요청이 접수되었습니다.<br>관리자 확인 후 환불이 처리됩니다.</div></div>`
+    return
+  }
+  // 대기 — 입금 안내
+  const room=r.room_name||''
+  const bank=siteSettings['payment_'+room+'_bank']||siteSettings['payment_bank']||'(은행 미설정)'
+  const account=siteSettings['payment_'+room+'_account']||siteSettings['payment_account']||'(계좌 미설정)'
+  const holder=siteSettings['payment_'+room+'_holder']||siteSettings['payment_holder']||'(예금주 미설정)'
+  const timeoutHours=parseInt(siteSettings['payment_timeout_hours']||'3')
+  sec.innerHTML=`
+    <div class="pay-card">
+      <h3>입금 안내</h3>
+      <div class="info-row"><span class="label">은행</span><span class="value">${escapeHtml(bank)}</span></div>
+      <div class="info-row"><span class="label">계좌번호</span><span class="value" style="font-weight:500">${escapeHtml(account)}</span></div>
+      <div class="info-row"><span class="label">예금주</span><span class="value">${escapeHtml(holder)}</span></div>
+      <div style="border-top:0.5px solid #eee;margin:12px 0 8px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:13px;color:#555">입금 금액</span>
+        <span class="pay-amount">${r.total_paid?Number(r.total_paid).toLocaleString():'-'}<span>원</span></span>
+      </div>
+      <div class="timeout-bar">⏱ <strong>${timeoutHours}시간 내</strong> 입금이 확인되지 않으면 예약이 자동 취소됩니다.</div>
+    </div>
+  `
+}
+
+// 동행인 렌더링
+function renderCompanions(){
+  const list=$('companionList')
+  const companions=Array.isArray(reservation.companions)?reservation.companions:[]
+  list.innerHTML=companions.length?companions.map((c,i)=>companionItemHtml(c,i)).join(''):''
+}
+
+function companionItemHtml(c,i){
+  return `<div class="companion-item" data-idx="${i}">
+    <input type="text" placeholder="이름" value="${escapeHtml(c.name||'')}" data-field="name">
+    <input type="text" placeholder="010-0000-0000" maxlength="13" value="${fmtPhone(c.phone||'')}" data-field="phone" oninput="formatCompanionPhone(this)">
+    <button type="button" class="del" onclick="removeCompanion(${i})">삭제</button>
+  </div>`
+}
+
+window.formatCompanionPhone=function(input){
+  let v=input.value.replace(/\D/g,'').substring(0,11)
+  if(v.length<=3)input.value=v
+  else if(v.length<=7)input.value=v.slice(0,3)+'-'+v.slice(3)
+  else input.value=v.slice(0,3)+'-'+v.slice(3,7)+'-'+v.slice(7)
+}
+
+window.removeCompanion=function(idx){
+  const items=$('companionList').querySelectorAll('.companion-item')
+  if(items[idx])items[idx].remove()
+}
+
+function addCompanionRow(){
+  const list=$('companionList')
+  const idx=list.children.length
+  const div=document.createElement('div')
+  div.innerHTML=companionItemHtml({},idx)
+  list.appendChild(div.firstElementChild)
+}
+
+async function saveCompanions(){
+  const items=$('companionList').querySelectorAll('.companion-item')
+  const companions=[]
+  items.forEach(it=>{
+    const name=it.querySelector('[data-field="name"]').value.trim()
+    const phone=it.querySelector('[data-field="phone"]').value.replace(/\D/g,'')
+    if(name||phone)companions.push({name,phone})
+  })
+  try{
+    const{error}=await sb.from('reservations').update({
+      companions,
+      has_customer_change:true,
+      updated_at:new Date().toISOString()
+    }).eq('id',reservation.id)
+    if(error)throw error
+    reservation.companions=companions
+    showToast('동행인 정보가 저장되었습니다')
+  }catch(e){
+    console.error('[saveCompanions]',e)
+    showToast('저장 실패',true)
+  }
+}
+
+// 후기 렌더링
+function renderReview(){
+  const r=reservation
+  const visit=r.visit_date
+  if(!visit){$('reviewCard').style.display='none';return}
+  const todayISO=new Date().toLocaleDateString('sv-SE')
+  // D+0 (방문 당일) 이후만 표시
+  const canShow=todayISO>=visit
+  if(!canShow){$('reviewCard').style.display='none';return}
+  $('reviewCard').style.display='block'
+  const savedView=$('reviewSavedView')
+  if(r.review){
+    const editTag=(r.review_history&&r.review_history.length>0)?'<span style="font-size:10px;color:#e67e22;margin-left:6px">(수정됨)</span>':''
+    savedView.innerHTML=`<div class="review-saved">${escapeHtml(r.review)}${editTag}</div>`
+  }else{
+    savedView.innerHTML=''
+  }
+  $('reviewInput').value=r.review||''
+  $('reviewSaveBtn').textContent=r.review?'후기 수정':'후기 저장'
+  $('reviewInput').placeholder=r.review?'후기를 수정해 주세요':'후기를 남겨주세요'
+}
+
+async function saveReview(){
+  const newText=$('reviewInput').value.trim()
+  if(!newText){showToast('후기 내용을 입력해 주세요',true);return}
+  const history=Array.isArray(reservation.review_history)?[...reservation.review_history]:[]
+  if(reservation.review&&reservation.review!==newText){
+    history.push({
+      content:reservation.review,
+      saved_at:reservation.review_updated_at||reservation.updated_at||new Date().toISOString()
+    })
+  }
+  try{
+    const{error}=await sb.from('reservations').update({
+      review:newText,
+      review_history:history,
+      review_updated_at:new Date().toISOString(),
+      has_customer_change:true,
+      updated_at:new Date().toISOString()
+    }).eq('id',reservation.id)
+    if(error)throw error
+    reservation.review=newText
+    reservation.review_history=history
+    reservation.review_updated_at=new Date().toISOString()
+    showToast(history.length>0?'후기가 수정되었습니다':'후기가 저장되었습니다')
+    renderReview()
+  }catch(e){
+    console.error('[saveReview]',e)
+    showToast('저장 실패',true)
+  }
+}
+
+// 인원 변경 (비버튼만 가격 재계산)
+async function savePeople(){
+  const newPeople=parseInt($('peopleInput').value)||0
+  if(newPeople<1){showToast('인원수를 입력해주세요',true);return}
+  if(newPeople===reservation.people_count){showToast('변경 사항이 없습니다');return}
+
+  // pricing/discount/options 별도 조회 (비버튼만 필요)
+  let newTotal=reservation.total_paid
+  if(reservation.room_name==='비버튼'){
+    try{
+      const[{data:prs},{data:dcs},{data:ops}]=await Promise.all([
+        sb.from('pricing').select('*').eq('room_name','비버튼').maybeSingle(),
+        sb.from('discounts').select('*').eq('room_name','비버튼'),
+        sb.from('options').select('*').eq('is_active',true)
+      ])
+      const p=prs
+      if(p){
+        if(newPeople>p.max_people){showToast(`최대 ${p.max_people}인까지 가능합니다`,true);return}
+        const wknd=isWeekendISO(reservation.visit_date)
+        const isHol=isHolidayISO(reservation.visit_date)
+        const disc=(dcs||[]).find(d=>reservation.visit_date>=d.start_date&&reservation.visit_date<=d.end_date)
+        let base
+        if(disc){
+          if(isHol&&disc.holiday_price)base=disc.holiday_price
+          else if(wknd&&disc.weekend_price)base=disc.weekend_price
+          else if(!wknd&&disc.weekday_price)base=disc.weekday_price
+          else base=wknd?p.weekend_price:p.weekday_price
+        }else{base=wknd?p.weekend_price:p.weekday_price}
+        const extra=Math.max(0,newPeople-p.base_people)
+        const unit=p.season_discount>0?p.season_discount:p.extra_per_person
+        let bbqPrice=0
+        if(reservation.bbq_added??reservation.bbq){
+          const bbq=(ops||[]).find(o=>o.name==='바베큐')
+          if(bbq)bbqPrice=bbq.discount_price||bbq.price
+        }
+        newTotal=base+(extra*unit)+bbqPrice
+      }
+    }catch(e){console.error('[recalc]',e)}
+  }
+
+  try{
+    const{error}=await sb.from('reservations').update({
+      people_count:newPeople,
+      total_paid:newTotal,
+      has_customer_change:true,
+      updated_at:new Date().toISOString()
+    }).eq('id',reservation.id)
+    if(error)throw error
+    reservation.people_count=newPeople
+    reservation.total_paid=newTotal
+    $('vTotal').textContent=newTotal?Number(newTotal).toLocaleString()+'원':'-'
+    renderPaySection()
+    if(reservation.room_name==='비버튼'){
+      showToast('인원 변경 완료. 추가 입금 금액을 확인해 주세요')
+    }else{
+      showToast('인원이 변경되었습니다')
+    }
+  }catch(e){
+    console.error('[savePeople]',e)
+    showToast('변경에 실패했습니다',true)
+  }
+}
+
+// 주말/공휴일 헬퍼
+const KR_HOLIDAYS=['2026-01-01','2026-01-28','2026-01-29','2026-01-30','2026-03-01','2026-05-05','2026-05-25','2026-06-06','2026-08-15','2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25']
+function isWeekendISO(iso){const d=new Date(iso+'T00:00:00');const dow=d.getDay();return dow===0||dow===6}
+function isHolidayISO(iso){return KR_HOLIDAYS.includes(iso)}
+
+// 도착시간 입력 마스킹 (430→4:30, 1430→14:30)
+function attachArrivalMask(){
+  $('arrivalInput').addEventListener('input',e=>{
+    const digits=e.target.value.replace(/\D/g,'').substring(0,4)
+    if(!digits)e.target.value=''
+    else if(digits.length<=2)e.target.value=digits
+    else if(digits.length===3)e.target.value=digits[0]+':'+digits.slice(1)
+    else e.target.value=digits.slice(0,2)+':'+digits.slice(2)
+  })
+}
+
+async function save(){
+  if(!reservation)return
+  clearMsg()
+
+  const btn=$('saveBtn')
+  btn.disabled=true
+  btn.textContent='저장 중...'
+
+  try{
+    const rules=getPoolRules(reservation.visit_date,reservation.room_name)
+
+    // 1) 수영시간 처리 — select 모드에서만
+    if(rules.mode==='select'){
+      // (a) 시간을 비웠다면 → 내 pool_bookings 삭제
+      if(!selectedTime){
+        if(myPool){
+          const {error}=await sb.from('pool_bookings').delete().eq('id',myPool.id)
+          if(error)throw error
+          myPool=null
+        }
+      }else{
+        // (b) 저장 직전 한 번 더 중복 검사 — pool_bookings + reservations.swim_time 둘 다
+        const [{data:dup,error:dErr},{data:dupRes,error:rErr}]=await Promise.all([
+          sb.from('pool_bookings')
+            .select('id,reservation_id')
+            .eq('reservation_date',reservation.visit_date)
+            .eq('pool_time',selectedTime),
+          sb.from('reservations')
+            .select('id,is_cancelled,status')
+            .eq('visit_date',reservation.visit_date)
+            .eq('swim_time',selectedTime)
+        ])
+        if(dErr)throw dErr
+        if(rErr)throw rErr
+        const conflict=(dup||[]).find(p=>p.reservation_id!==reservation.id)
+          ||(dupRes||[]).find(r=>r.id!==reservation.id&&!r.is_cancelled&&r.status!=='취소')
+        if(conflict){
+          showErr('이미 선택된 수영 시간입니다. 다른 시간을 선택해주세요.')
+          // 최신 상태로 갱신
+          await load()
+          return
+        }
+
+        if(myPool){
+          // 기존 행 업데이트
+          const {error}=await sb.from('pool_bookings')
+            .update({pool_time:selectedTime,room:reservation.room_name,updated_at:new Date().toISOString()})
+            .eq('id',myPool.id)
+          if(error){
+            // 23505 = unique_violation
+            if(error.code==='23505'){
+              showErr('이미 선택된 수영 시간입니다. 다른 시간을 선택해주세요.')
+              await load()
+              return
+            }
+            throw error
+          }
+        }else{
+          const {error}=await sb.from('pool_bookings').insert([{
+            reservation_id:reservation.id,
+            reservation_date:reservation.visit_date,
+            room:reservation.room_name,
+            pool_time:selectedTime
+          }])
+          if(error){
+            if(error.code==='23505'){
+              showErr('이미 선택된 수영 시간입니다. 다른 시간을 선택해주세요.')
+              await load()
+              return
+            }
+            throw error
+          }
+        }
+      }
+    }
+
+    // 2) reservations 업데이트 — bbq_added, arrival_time, swim_time 미러링
+    const bbqVal=$('bbqCheck').checked
+    const arrivalVal=$('arrivalInput').value.trim()||null
+    const swimMirror=rules.mode==='select'?(selectedTime||null):null
+
+    const updates={
+      bbq_added:bbqVal,
+      bbq:bbqVal,                  // 기존 admin 화면 호환을 위해 동기화
+      arrival_time:arrivalVal,
+      has_customer_change:true,
+      updated_at:new Date().toISOString()
+    }
+    if(rules.mode==='select')updates.swim_time=swimMirror
+
+    const {error:uErr}=await sb.from('reservations')
+      .update(updates)
+      .eq('id',reservation.id)
+    if(uErr)throw uErr
+
+    showOk('저장되었습니다.')
+    await load()
+  }catch(e){
+    console.error('[save]',e)
+    showErr('저장에 실패했습니다. 잠시 후 다시 시도해주세요.')
+  }finally{
+    const b=$('saveBtn')
+    b.disabled=false
+    b.textContent='저장하기'
+  }
+}
+
+function openCancelModal(){
+  $('refundAccInput').value=reservation.refund_account||''
+  $('modalOverlay').classList.add('show')
+  $('cancelModal').classList.add('show')
+}
+function closeCancelModal(){
+  $('modalOverlay').classList.remove('show')
+  $('cancelModal').classList.remove('show')
+}
+
+async function requestCancel(){
+  if(!reservation)return
+  const refundAcc=$('refundAccInput').value.trim()
+  if(!refundAcc){showToast('환불 받으실 계좌를 입력해주세요',true);return}
+  closeCancelModal()
+  clearMsg()
+  try{
+    const {error}=await sb.from('reservations')
+      .update({
+        cancel_request_status:'요청됨',
+        status:'취소요청',
+        refund_account:refundAcc,
+        has_customer_change:true,
+        updated_at:new Date().toISOString()
+      })
+      .eq('id',reservation.id)
+    if(error)throw error
+    showOk('취소 요청이 접수되었습니다. 관리자 확인 후 환불이 처리됩니다.')
+    await load()
+  }catch(e){
+    console.error('[cancel]',e)
+    showErr('취소 요청에 실패했습니다. 잠시 후 다시 시도해주세요.')
+  }
+}
+
+$('saveBtn').addEventListener('click',save)
+$('cancelBtn').addEventListener('click',openCancelModal)
+$('modalCancel').addEventListener('click',closeCancelModal)
+$('modalOverlay').addEventListener('click',closeCancelModal)
+$('modalConfirm').addEventListener('click',requestCancel)
+
+// 인원 변경
+$('peopleSaveBtn').addEventListener('click',savePeople)
+
+// 동행인
+$('companionAddBtn').addEventListener('click',addCompanionRow)
+$('companionSaveBtn').addEventListener('click',saveCompanions)
+
+// 후기
+$('reviewSaveBtn').addEventListener('click',saveReview)
+
+// 도착시간 마스킹
+attachArrivalMask()
+
+// 바베큐 그릴 상세 정보 펼치기/접기
+$('bbqInfoBtn').addEventListener('click',()=>{
+  const det=$('bbqDetails')
+  const btn=$('bbqInfoBtn')
+  const open=det.style.display==='block'
+  det.style.display=open?'none':'block'
+  btn.classList.toggle('open',!open)
+})
+
+load()
+</script>
+</body>
+</html>
