@@ -48,7 +48,7 @@
     .cal-item.available{color:#1a1a1a;cursor:pointer;display:block}
     .cal-item.available:hover{color:#378add}
     .cal-item.confirmed{color:#c0392b;text-decoration:line-through;cursor:default}
-    .cal-item.pending{color:#2980b9;text-decoration:underline dotted;cursor:default}
+    .cal-item.pending{color:#2980b9;text-decoration:underline dotted;cursor:pointer}
     .cal-item.cancel-req{color:#8e44ad;text-decoration:line-through;cursor:default}
     .cal-item.other-cancel-req{color:#d4a8e8;text-decoration:line-through;cursor:default}
     .cal-item.blocked{color:#e67e22;text-decoration:line-through;cursor:pointer}
@@ -380,12 +380,12 @@
   <button class="popup-close" onclick="closeAll()">닫기</button>
 </div>
 
-<!-- 예약막기 취소 팝업 -->
+<!-- 예약막기 / 임시막기 / 예약대기 취소 팝업 -->
 <div class="popup" id="unblockPopup" style="min-width:240px;max-width:320px">
-  <h3>예약막기 취소</h3>
+  <h3 id="unblockTitle">예약막기 취소</h3>
   <div id="unblockInfo" style="font-size:12px;color:#555;margin-bottom:14px"></div>
   <div style="display:flex;gap:8px">
-    <button class="btn-sm btn-cancel-action" onclick="confirmUnblock()">예약막기 해제</button>
+    <button class="btn-sm btn-cancel-action" id="unblockBtn" onclick="confirmUnblock()">예약막기 해제</button>
     <button class="popup-close" style="margin-top:0" onclick="closeAll()">닫기</button>
   </div>
 </div>
@@ -828,6 +828,9 @@ function buildCalCell(d,y,m,isoDay,isOther){
     if(rs){
       item.className='cal-item '+getCalItemClass(rs.status,rs.type,isOther)
       item.textContent=h
+      if(!isOther&&(rs.type==='block'||rs.type==='temp_block'||rs.status==='대기')){
+        item.onclick=(e)=>{e.stopPropagation();openUnblockConfirm(h,isoDay)}
+      }
     }else{
       item.className='cal-item '+(isOther?'other-available':'available')
       item.textContent=h
@@ -1571,14 +1574,24 @@ async function addOption(){
   document.querySelectorAll('#newOptRooms input').forEach(c=>c.checked=false)
 }
 
-// ── 예약막기 취소 ──
+// ── 예약막기 / 임시막기 / 예약대기 취소 ──
 let unblockTarget={house:'',isoDate:'',id:''}
 
 function openUnblockConfirm(house,isoDate){
-  const row=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&r.booking_type==='block')
+  const row=allData.find(r=>r.room_name===house&&r.visit_date&&r.visit_date.startsWith(isoDate)&&!r.is_cancelled&&r.status!=='취소'&&(r.booking_type==='block'||r.booking_type==='temp_block'||r.status==='대기'))
   if(!row)return
   unblockTarget={house,isoDate,id:row.id}
-  document.getElementById('unblockInfo').textContent=`${house}  ·  ${isoDate}  예약막기를 해제하시겠습니까?`
+  let title,info,btn
+  if(row.booking_type==='block'){
+    title='예약막기 취소';info=`${house}  ·  ${isoDate}  예약막기를 해제하시겠습니까?`;btn='예약막기 해제'
+  }else if(row.booking_type==='temp_block'){
+    title='임시막기 취소';info=`${house}  ·  ${isoDate}  임시막기를 해제하시겠습니까?`;btn='임시막기 해제'
+  }else{
+    title='예약대기 취소';info=`${house}  ·  ${isoDate}  ${row.customer_name||''} 예약대기를 취소하시겠습니까?`;btn='예약대기 취소'
+  }
+  document.getElementById('unblockTitle').textContent=title
+  document.getElementById('unblockInfo').textContent=info
+  document.getElementById('unblockBtn').textContent=btn
   document.getElementById('unblockPopup').classList.add('show')
   document.getElementById('overlay').classList.add('show')
 }
